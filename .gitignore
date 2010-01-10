@@ -1,3 +1,4 @@
 *.pyc
 settings.yaml
 brobot-plugins
+*.db
