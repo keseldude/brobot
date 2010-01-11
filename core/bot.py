@@ -98,6 +98,9 @@ class IRCBot(irc.Client):
         if initial_channels:
             self.join(connection, *initial_channels)
     
+    def is_admin(self, server, nick):
+        return nick in self.admins[server]
+    
     def get_version(self, connection, source):
         return self.version
     
