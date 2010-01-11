@@ -98,14 +98,14 @@ class ConnectionManager(object):
                 if not connection.connected:
                     del self.connections[sock]
         except (select.error, KeyboardInterrupt):
-            self.exit()
+            self.exit('Bye!')
         else:
             for sock in in_sockets:
                 self.connections[sock].process(self.event_manager)
     
-    def exit(self):
+    def exit(self, message):
         for connection in self.connections.values():
-            connection.disconnect('Bye!')
+            connection.disconnect(message)
     
     @property
     def running(self):
@@ -296,6 +296,9 @@ class Client(object):
     def start(self):
         while self.connection_manager.running:
             self.connection_manager.process()
+    
+    def exit(self, message='Bye!'):
+        self.connection_manager.exit(message)
     
     def connect(self, host, port, nick, use_ssl=False):
         server = Server(host, port, nick, use_ssl)
