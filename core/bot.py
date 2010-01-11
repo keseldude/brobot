@@ -101,7 +101,7 @@ class IRCBot(irc.Client):
     def is_admin(self, server, nick):
         return nick in self.admins[server]
     
-    def get_version(self, connection, source):
+    def get_version(self):
         return self.version
     
     def process_message(self, connection, source, target, message, pubmsg=True):

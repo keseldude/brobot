@@ -386,7 +386,7 @@ class Client(object):
         except NotImplementedError:
             pass
     
-    def get_version(self, connection, source):
+    def get_version(self):
         raise NotImplementedError
     
     def _on_ctcp(self, connection, source, message):
@@ -401,7 +401,7 @@ class Client(object):
         
         if command == 'VERSION':
             try:
-                reply = self.get_version(connection, source)
+                reply = self.get_version()
             except NotImplementedError:
                 pass
         elif command == 'PING':

@@ -19,6 +19,9 @@ command_plugins:
           commands:
               - commands
               - help
+        - path: version.VersionPlugin
+          commands:
+              - version
     
 
 event_plugins:
