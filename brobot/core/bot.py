@@ -211,7 +211,7 @@ class IRCBot(Client):
         process.start()
     
     def on_privmsg(self, connection, source, target, message):
-        self._on_msg(connection, source, target, message, False)
+        self._on_msg(connection, source, source.nick, message, False)
     
     def on_pubmsg(self, connection, source, target, message):
         self._on_msg(connection, source, target, message, True)
