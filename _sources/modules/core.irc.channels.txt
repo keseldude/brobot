@@ -1,0 +1,10 @@
+:mod:`brobot.core.irc.structures`
+===============================
+
+.. automodule:: brobot.core.irc.structures
+    :members:
+
+Module Contents
+---------------
+
+.. autoclass:: Channel

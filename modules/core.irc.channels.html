@@ -1,0 +1,150 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brobot.core.irc.structures &mdash; brobot v1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="brobot v1.0 documentation" href="../index.html" />
+    <link rel="prev" title="Welcome to brobot’s documentation!" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to brobot’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">brobot v1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="brobot-core-irc-structures">
+<h1><a class="reference internal" href="#module-brobot.core.irc.structures" title="brobot.core.irc.structures"><tt class="xref py py-mod docutils literal"><span class="pre">brobot.core.irc.structures</span></tt></a><a class="headerlink" href="#brobot-core-irc-structures" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-brobot.core.irc.structures"></span><dl class="class">
+<dt id="brobot.core.irc.structures.Channel">
+<em class="property">class </em><tt class="descclassname">brobot.core.irc.structures.</tt><tt class="descname">Channel</tt><big>(</big><em>server</em>, <em>name</em>, <em>users=None</em>, <em>modes=None</em><big>)</big><a class="reference internal" href="../_modules/brobot/core/irc/structures.html#Channel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brobot.core.irc.structures.Channel" title="Permalink to this definition">¶</a></dt>
+<dd><p>An IRC channel representation.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="brobot.core.irc.structures.Mode">
+<em class="property">class </em><tt class="descclassname">brobot.core.irc.structures.</tt><tt class="descname">Mode</tt><big>(</big><em>character</em>, <em>param=''</em>, <em>on=True</em><big>)</big><a class="reference internal" href="../_modules/brobot/core/irc/structures.html#Mode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brobot.core.irc.structures.Mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>An IRC mode representation, which stores the mode character, the
+parameter, and whether it is on.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="brobot.core.irc.structures.Server">
+<em class="property">class </em><tt class="descclassname">brobot.core.irc.structures.</tt><tt class="descname">Server</tt><big>(</big><em>host</em>, <em>port</em>, <em>nick</em>, <em>use_ssl=False</em><big>)</big><a class="reference internal" href="../_modules/brobot/core/irc/structures.html#Server"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brobot.core.irc.structures.Server" title="Permalink to this definition">¶</a></dt>
+<dd><p>An IRC server represenation, which stores the host, port, and nick of the
+user connected. Supports ssl (soon).</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="brobot.core.irc.structures.User">
+<em class="property">class </em><tt class="descclassname">brobot.core.irc.structures.</tt><tt class="descname">User</tt><big>(</big><em>nick</em>, <em>username</em>, <em>host</em>, <em>status</em><big>)</big><a class="reference internal" href="../_modules/brobot/core/irc/structures.html#User"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brobot.core.irc.structures.User" title="Permalink to this definition">¶</a></dt>
+<dd><p>An IRC user represenation, storing nick, username, host, and channel
+status.</p>
+<dl class="staticmethod">
+<dt id="brobot.core.irc.structures.User.parse_user">
+<em class="property">static </em><tt class="descname">parse_user</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="../_modules/brobot/core/irc/structures.html#User.parse_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#brobot.core.irc.structures.User.parse_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function that parses user information into a User object.</p>
+</dd></dl>
+
+</dd></dl>
+
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt>
+<em class="property">class </em><tt class="descclassname">brobot.core.irc.structures.</tt><tt class="descname">Channel</tt><big>(</big><em>server</em>, <em>name</em>, <em>users=None</em>, <em>modes=None</em><big>)</big><a class="reference internal" href="../_modules/brobot/core/irc/structures.html#Channel"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>An IRC channel representation.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#"><tt class="docutils literal"><span class="pre">brobot.core.irc.structures</span></tt></a><ul>
+<li><a class="reference internal" href="#module-contents">Module Contents</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../index.html"
+                        title="previous chapter">Welcome to brobot&#8217;s documentation!</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../index.html" title="Welcome to brobot’s documentation!"
+             >previous</a> |</li>
+        <li><a href="../index.html">brobot v1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Michael Keselman.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.5.
+    </div>
+  </body>
+</html>
