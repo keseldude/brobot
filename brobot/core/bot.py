@@ -193,7 +193,7 @@ class IRCBot(Client):
             command, args = tokens[0], tokens[1:]
             
             both = self.command_plugins['BOTH'].iteritems()
-            if pubmsg:
+            if is_pubmsg:
                 either = self.command_plugins['PUBMSG'].iteritems()
             else:
                 either = self.command_plugins['PRIVMSG'].iteritems()
