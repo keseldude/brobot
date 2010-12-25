@@ -185,7 +185,7 @@ class IRCBot(Client):
         """Returns the version of the bot."""
         return self.version
     
-    def process_message(self, connection, source, target, message, pubmsg=True):
+    def process_message(self, connection, source, target, message, is_pubmsg):
         """Processes a message, determining whether it is a bot command, and
         taking action if it is."""
         if message[0] == self.command_prefix:
@@ -203,15 +203,16 @@ class IRCBot(Client):
                     plugin.process(connection, source, target, args)
                     break
     
-    def _on_msg(self, connection, source, target, message, pubmsg=False):
+    def _on_msg(self, connection, source, target, message, is_pubmsg):
         process = Thread(target=self.process_message,
-                            args=(connection, source, target, message), kwargs={'pubmsg': pubmsg})
+                            args=(connection, source, target, message,
+                                  is_pubmsg))
         process.daemon = True
         process.start()
     
     def on_privmsg(self, connection, source, target, message):
-        self._on_msg(connection, source, target, message, pubmsg=False)
+        self._on_msg(connection, source, target, message, False)
     
     def on_pubmsg(self, connection, source, target, message):
-        self._on_msg(connection, source, target, message, pubmsg=True)
+        self._on_msg(connection, source, target, message, True)
     
