@@ -72,10 +72,13 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_hooks</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">event_hooks</span> <span class="o">=</span> <span class="n">event_hooks</span>
     
-    <span class="k">def</span> <span class="nf">hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_hooks</span><span class="p">:</span>
             <span class="n">event_hook</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_hooks</span><span class="p">[</span><span class="n">event</span><span class="p">]</span>
-            <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="n">arg</span><span class="p">]</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">EVENT_ARGS</span> <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">event_hook</span><span class="p">,</span> <span class="n">arg</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">kwargs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">arg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">EVENT_ARGS</span> \
+                    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">event_hook</span><span class="p">,</span> <span class="n">arg</span><span class="p">))</span>
             <span class="n">event_hook</span><span class="o">.</span><span class="n">function</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
     
 </div>
@@ -90,17 +93,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
     
 
-<span class="k">class</span> <span class="nc">Events</span><span class="p">:</span>
+<span class="k">class</span> <span class="nc">Events</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="n">CONNECT</span> <span class="o">=</span> <span class="s">&#39;CONNECT&#39;</span>
     <span class="n">PING</span> <span class="o">=</span> <span class="s">&#39;PING&#39;</span>
     <span class="n">MODE</span> <span class="o">=</span> <span class="s">&#39;MODE&#39;</span>
     <span class="n">UMODE</span> <span class="o">=</span> <span class="s">&#39;UMODE&#39;</span>
     <span class="n">JOIN</span> <span class="o">=</span> <span class="s">&#39;JOIN&#39;</span>
+    <span class="n">PART</span> <span class="o">=</span> <span class="s">&#39;PART&#39;</span>
+    <span class="n">QUIT</span> <span class="o">=</span> <span class="s">&#39;QUIT&#39;</span>
     <span class="n">PRIVMSG</span> <span class="o">=</span> <span class="s">&#39;PRIVMSG&#39;</span>
     <span class="n">PUBMSG</span> <span class="o">=</span> <span class="s">&#39;PUBMSG&#39;</span>
     <span class="n">NOTICE</span> <span class="o">=</span> <span class="s">&#39;NOTICE&#39;</span>
     <span class="n">PUBNOTICE</span> <span class="o">=</span> <span class="s">&#39;PUBNOTICE&#39;</span>
     <span class="n">PRIVNOTICE</span> <span class="o">=</span> <span class="s">&#39;PRIVNOTICE&#39;</span>
+    <span class="n">ERROR</span> <span class="o">=</span> <span class="s">&#39;ERROR&#39;</span>
     <span class="n">RPL_WELCOME</span> <span class="o">=</span> <span class="s">&#39;001&#39;</span>
     <span class="n">RPL_YOURHOST</span> <span class="o">=</span> <span class="s">&#39;002&#39;</span>
     <span class="n">RPL_CREATED</span> <span class="o">=</span> <span class="s">&#39;003&#39;</span>
