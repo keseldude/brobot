@@ -1,3 +1,5 @@
+debug: False
+
 servers:
     - host: irc.example.com
       port: 6667
