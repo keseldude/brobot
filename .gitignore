@@ -1,4 +1,8 @@
+.project
+.pydevproject
+.settings
 *.pyc
-settings.yaml
-brobot-plugins
-*.db
+settings.yml
+docs/_build
+brobot/brobot-plugins
+brobot/data

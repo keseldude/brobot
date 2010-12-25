@@ -16,15 +16,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>
 """
 
-def main():
-    from core import irc, bot
-    import yaml
-    
-    f = file('settings.yaml', 'r')
-    settings = yaml.load(f)
-    
-    bot = bot.IRCBot(settings)
-    bot.start()
+from core import bot
 
-if __name__ == '__main__':
-    main()
+class BotPlugin(bot.CommandPlugin):
+    name = 'bot'
+    def process(self, connection, source, target, args):
+        self.ircbot.privmsg(connection, target, ':)')
+    

@@ -18,15 +18,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 from core import bot
 
-class CommandsPlugin(bot.Plugin):
-    def __init__(self, ircbot):
-        super(CommandsPlugin, self).__init__(ircbot, 'commands')
-    
+class CommandsPlugin(bot.CommandPlugin):
+    name = 'commands'
     def process(self, connection, source, target, args):
         names = []
         for msg_type, plugins in self.ircbot.command_plugins.iteritems():
             for plugin in plugins.itervalues():
-                names.append(plugin.name)
+                if not plugin.admin:
+                    names.append(plugin.name)
         
-        self.ircbot.privmsg(connection, target, 'Commands: ' + ' '.join(sorted(names)))
+        self.ircbot.privmsg(connection, target,
+                            'Commands: ' + ' '.join(sorted(names)))
     

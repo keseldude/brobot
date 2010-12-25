@@ -7,9 +7,8 @@ brobot is an simple, extensible IRC bot written in Python, created by Michael Ke
 * Easy to use plugin interface that lets you
     * Code functionality for commands
     * Hook into any IRC event
-* Open Source
+* Free and Open Source
 * Flexible YAML settings file
-* Uses python's multiprocessing library instead of threads
 
 ## How To Use
 
@@ -29,10 +28,4 @@ brobot is an simple, extensible IRC bot written in Python, created by Michael Ke
 
 ## TODO
 
-* Manage users in channel (list of users, which modes they have, etc.)
-* SSL support
 * Write good responses for most of the codes in the IRC protocol
-* Document everything
-* Add more "standard" command plugins like
-    * Users
-* Recover from ping timeouts
