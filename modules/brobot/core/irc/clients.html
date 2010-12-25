@@ -1,0 +1,448 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brobot.core.irc.clients &mdash; brobot v1.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="brobot v1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">brobot v1.0 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brobot.core.irc.clients</h1><div class="highlight"><pre>
+<span class="c">#===============================================================================</span>
+<span class="c"># brobot</span>
+<span class="c"># Copyright (C) 2010  Michael Keselman</span>
+<span class="c"># </span>
+<span class="c"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c"># </span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c"># </span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;</span>
+<span class="c">#===============================================================================</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains mid-level building blocks for an IRC client. This is really the bridge</span>
+<span class="sd">between the low-level connections module and the high level client that someone</span>
+<span class="sd">using this library would write.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">events</span> <span class="kn">import</span> <span class="n">Events</span><span class="p">,</span> <span class="n">EventManager</span><span class="p">,</span> <span class="n">EventHook</span>
+<span class="kn">from</span> <span class="nn">connections</span> <span class="kn">import</span> <span class="n">ConnectionManager</span><span class="p">,</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">IRCError</span>
+<span class="kn">from</span> <span class="nn">structures</span> <span class="kn">import</span> <span class="n">Channel</span><span class="p">,</span> <span class="n">Server</span><span class="p">,</span> <span class="n">User</span><span class="p">,</span> <span class="n">Mode</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">threading</span> <span class="kn">import</span> <span class="n">Lock</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PluginEventManager"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.PluginEventManager">[docs]</a><span class="k">class</span> <span class="nc">PluginEventManager</span><span class="p">(</span><span class="n">EventManager</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An extension of EventManager that allows for plugins to hook into IRC</span>
+<span class="sd">    events.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event_hooks</span><span class="p">,</span> <span class="n">event_plugins</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PluginEventManager</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">event_hooks</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_plugins</span> <span class="o">=</span> <span class="n">event_plugins</span>
+    
+<div class="viewcode-block" id="PluginEventManager.hook"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.PluginEventManager.hook">[docs]</a>    <span class="k">def</span> <span class="nf">hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">kwargs</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Still performs the regular event hooks, and afterward, the plugin</span>
+<span class="sd">        hooks.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PluginEventManager</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">hook</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_plugins</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_plugins</span><span class="p">[</span><span class="n">event</span><span class="p">]:</span>
+                <span class="n">plugin</span><span class="o">.</span><span class="n">process</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    </div></div>
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The base IRC Client, which wraps a ConnectionManager and provides an</span>
+<span class="sd">    interface to low level connection functions. It can be extended to make a</span>
+<span class="sd">    full IRC client or an IRC bot.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">servers</span><span class="p">,</span> <span class="n">event_plugins</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_servers</span> <span class="o">=</span> <span class="n">servers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pinged</span> <span class="o">=</span> <span class="bp">False</span>
+        
+        <span class="k">if</span> <span class="n">event_plugins</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">event_plugins</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">connection_manager</span> <span class="o">=</span> <span class="n">ConnectionManager</span><span class="p">(</span><span class="n">PluginEventManager</span><span class="p">({</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">CONNECT</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_connect</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">RPL_WELCOME</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_welcome</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                          <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">PING</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_ping</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">MODE</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_mode</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                   <span class="n">args</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">UMODE</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_umode</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                    <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">JOIN</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_join</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">PART</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_part</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                   <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">QUIT</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_quit</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">RPL_NAMEREPLY</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_name_reply</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                            <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                            <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">PRIVMSG</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_privmsg</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                      <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">PUBMSG</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_pubmsg</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                     <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">RPL_CHANNELMODEIS</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_channel_mode</span><span class="p">,</span>
+                                                <span class="n">source</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                <span class="n">args</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">ERR_NICKNAMEINUSE</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_nickname_in_use</span><span class="p">),</span>
+            <span class="n">Events</span><span class="o">.</span><span class="n">ERROR</span><span class="p">:</span> <span class="n">EventHook</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_error</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="p">},</span> <span class="n">event_plugins</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">process_lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+    
+<div class="viewcode-block" id="Client.start"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Starts the Client by first connecting to all given servers and then</span>
+<span class="sd">        starting the main loop.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_servers</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">(</span><span class="n">server</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_initial_connect</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection_manager</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_lock</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">connection_manager</span><span class="o">.</span><span class="n">process</span><span class="p">()</span>
+    </div>
+    <span class="k">def</span> <span class="nf">_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a connection to the server by creating a Connection object,</span>
+<span class="sd">        connecting it, and then registering the new Connection with the</span>
+<span class="sd">        ConnectionManager.&quot;&quot;&quot;</span>
+        <span class="n">connection</span> <span class="o">=</span> <span class="n">Connection</span><span class="p">(</span><span class="n">server</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">IRCError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connection_manager</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="Client.on_initial_connect"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.on_initial_connect">[docs]</a>    <span class="k">def</span> <span class="nf">on_initial_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Function performed after all servers have been connected.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    </div>
+<div class="viewcode-block" id="Client.exit"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.exit">[docs]</a>    <span class="k">def</span> <span class="nf">exit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s">&#39;Bye!&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Disconnects from every connection in the ConnectionManager with the</span>
+<span class="sd">        given QUIT message.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_lock</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connection_manager</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    </div>
+    <span class="k">def</span> <span class="nf">get_server_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">channel</span><span class="o">.</span><span class="n">server</span> <span class="o">==</span> <span class="n">server</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">channel</span>
+    
+<div class="viewcode-block" id="Client.find_channel"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.find_channel">[docs]</a>    <span class="k">def</span> <span class="nf">find_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Searches for a Channel based on the server and the name. Returns</span>
+<span class="sd">        None if the Channel is not found.&quot;&quot;&quot;</span>
+        <span class="n">search_channel</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">search_channel</span> <span class="o">==</span> <span class="n">channel</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">channel</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    </div>
+<div class="viewcode-block" id="Client.remove_channel"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.remove_channel">[docs]</a>    <span class="k">def</span> <span class="nf">remove_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Tries to remove a Channel based on the server and the name, and fails</span>
+<span class="sd">        silently.&quot;&quot;&quot;</span>
+        <span class="n">channel</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">u&quot;Channel `</span><span class="si">%s</span><span class="s">&#39; not in channels.&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Client.find_connection"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.find_connection">[docs]</a>    <span class="k">def</span> <span class="nf">find_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Searches for a Connection based on the server and compares only the</span>
+<span class="sd">        host of the server. Returns None if the Connection is not found.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">connection</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection_manager</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">host</span> <span class="o">==</span> <span class="n">server</span><span class="o">.</span><span class="n">host</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">connection</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    </div>
+<div class="viewcode-block" id="Client.connect"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">nick</span><span class="p">,</span> <span class="n">use_ssl</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Used for connecting to a server not given when creating the Client</span>
+<span class="sd">        object.&quot;&quot;&quot;</span>
+        <span class="n">server</span> <span class="o">=</span> <span class="n">Server</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">nick</span><span class="p">,</span> <span class="n">use_ssl</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">(</span><span class="n">server</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Client.nick"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.nick">[docs]</a>    <span class="k">def</span> <span class="nf">nick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">new_nick</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Changes the nick in the given connection.&quot;&quot;&quot;</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;NICK &#39;</span> <span class="o">+</span> <span class="n">new_nick</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Client.mode"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.mode">[docs]</a>    <span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs the IRC MODE command.&quot;&quot;&quot;</span>
+        <span class="n">mode_message</span> <span class="o">=</span> <span class="s">&#39;MODE </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">target</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">mode_message</span> <span class="o">+=</span> <span class="s">&#39; </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">mode</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">mode_message</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Client.privmsg"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.privmsg">[docs]</a>    <span class="k">def</span> <span class="nf">privmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sends a PRIVMSG to a target in the given connection.&quot;&quot;&quot;</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;PRIVMSG </span><span class="si">%s</span><span class="s"> :</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Client.notice"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.notice">[docs]</a>    <span class="k">def</span> <span class="nf">notice</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sends a NOTICE to a target in the given connection.&quot;&quot;&quot;</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;NOTICE </span><span class="si">%s</span><span class="s"> :</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Client.ctcp_reply"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.ctcp_reply">[docs]</a>    <span class="k">def</span> <span class="nf">ctcp_reply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">reply</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sends a CTCP reply to a target in a given connection.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notice</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="s">&#39;</span><span class="se">\x01</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="se">\x01</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">reply</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Client.join"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.join">[docs]</a>    <span class="k">def</span> <span class="nf">join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="o">*</span><span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Makes the client join a bunch of channels. Example password protected</span>
+<span class="sd">        channel argument: &#39;#mathematics love&#39; where &#39;love&#39; is the password.&quot;&quot;&quot;</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;JOIN &#39;</span> <span class="o">+</span> <span class="s">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">channels</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Client.part"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.part">[docs]</a>    <span class="k">def</span> <span class="nf">part</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="o">*</span><span class="n">channels</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Makes the client part from a bunch of channels.&quot;&quot;&quot;</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;PART &#39;</span> <span class="o">+</span> <span class="s">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">channels</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Client.kick"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.kick">[docs]</a>    <span class="k">def</span> <span class="nf">kick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">channel</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Kicks a user from a channel in a given connection for a given</span>
+<span class="sd">        reason.&quot;&quot;&quot;</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;KICK </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> :</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">reason</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="Client.quit"><a class="viewcode-back" href="../../../../modules/core.irc.clients.html#brobot.core.irc.clients.Client.quit">[docs]</a>    <span class="k">def</span> <span class="nf">quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s">u&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Disconnects the given connection with the given message. This is</span>
+<span class="sd">        better than just quitting because it also cleans things up with the</span>
+<span class="sd">        connection manager.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_lock</span><span class="p">:</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">disconnect</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    </div>
+    <span class="k">def</span> <span class="nf">on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+    <span class="k">def</span> <span class="nf">_on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;NICK &#39;</span> <span class="o">+</span> <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">nick</span><span class="p">)</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;USER </span><span class="si">%s</span><span class="s"> 0 * :</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">nick</span><span class="p">,</span>
+                                             <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">nick</span><span class="p">))</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_connect</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+            <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">on_welcome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+    <span class="k">def</span> <span class="nf">_on_welcome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">actual_nick</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_welcome</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+            <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">on_nickname_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">nick</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">nick</span> <span class="o">+</span> <span class="s">&#39;_&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_connect</span><span class="p">(</span><span class="n">connection</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_on_join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">nick</span> <span class="o">==</span> <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">actual_nick</span><span class="p">:</span>
+            <span class="n">channel</span> <span class="o">=</span> <span class="n">Channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">channel</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">channel</span><span class="o">.</span><span class="n">add_user</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">nick</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">User</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">_on_name_reply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">channel_name</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">channel_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
+                <span class="n">channel</span><span class="o">.</span><span class="n">add_user</span><span class="p">(</span><span class="n">User</span><span class="o">.</span><span class="n">parse_user</span><span class="p">(</span><span class="n">user</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">_on_part</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">nick</span> <span class="o">==</span> <span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">actual_nick</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">channel</span><span class="o">.</span><span class="n">remove_user</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">nick</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">User</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">_on_quit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">channel_user</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">nick</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_server_channels</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">):</span>
+            <span class="n">channel</span><span class="o">.</span><span class="n">remove_user</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">on_privmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+    <span class="k">def</span> <span class="nf">_on_privmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">message</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x01</span><span class="s">&#39;</span> <span class="ow">and</span> <span class="n">message</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x01</span><span class="s">&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_on_ctcp</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">message</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">on_privmsg</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+                <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">on_pubmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+    <span class="k">def</span> <span class="nf">_on_pubmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_pubmsg</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+            <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">_on_channel_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">modes</span><span class="p">),</span> <span class="n">mode_args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">channel_modes</span> <span class="o">=</span> <span class="n">Mode</span><span class="o">.</span><span class="n">parse_modes</span><span class="p">(</span><span class="n">modes</span><span class="p">,</span> <span class="n">mode_args</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">channel_modes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">on</span><span class="p">:</span>
+                    <span class="n">channel</span><span class="o">.</span><span class="n">add_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">channel</span><span class="o">.</span><span class="n">remove_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+    <span class="k">def</span> <span class="nf">_on_ctcp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">command</span><span class="p">,</span> <span class="n">arg</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span>
+        <span class="n">split_message</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_message</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">arg</span> <span class="o">=</span> <span class="n">split_message</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">command</span> <span class="o">=</span> <span class="n">split_message</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">reply</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="n">command</span> <span class="o">==</span> <span class="s">&#39;VERSION&#39;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">reply</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_version</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">command</span> <span class="o">==</span> <span class="s">&#39;PING&#39;</span> <span class="ow">and</span> <span class="n">arg</span><span class="p">:</span>
+            <span class="n">reply</span> <span class="o">=</span> <span class="n">arg</span>
+        <span class="k">elif</span> <span class="n">command</span> <span class="o">==</span> <span class="s">&#39;TIME&#39;</span><span class="p">:</span>
+            <span class="n">reply</span> <span class="o">=</span> <span class="s">&#39;:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">ctime</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">reply</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ctcp_reply</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">nick</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">reply</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_on_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="n">channel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_channel</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">channel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">modes</span><span class="p">,</span> <span class="n">mode_args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">channel_modes</span> <span class="o">=</span> <span class="n">Mode</span><span class="o">.</span><span class="n">parse_modes</span><span class="p">(</span><span class="n">modes</span><span class="p">,</span> <span class="n">mode_args</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">channel_modes</span><span class="p">:</span>
+                <span class="n">user</span> <span class="o">=</span> <span class="n">channel</span><span class="o">.</span><span class="n">find_user</span><span class="p">(</span><span class="n">mode</span><span class="o">.</span><span class="n">param</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">on</span><span class="p">:</span>
+                        <span class="n">user</span><span class="o">.</span><span class="n">add_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">user</span><span class="o">.</span><span class="n">remove_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">mode</span><span class="o">.</span><span class="n">on</span><span class="p">:</span>
+                        <span class="n">channel</span><span class="o">.</span><span class="n">add_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">channel</span><span class="o">.</span><span class="n">remove_mode</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_on_umode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">_on_ping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s">&#39;PONG </span><span class="si">%s</span><span class="s"> :</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">actual_host</span><span class="p">,</span>
+                                         <span class="n">message</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">_on_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s">u&#39;ping timeout&#39;</span> <span class="ow">in</span> <span class="n">message</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_connect</span><span class="p">(</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="n">message</span><span class="p">))</span>
+    </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">brobot v1.0 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Michael Keselman.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.5.
+    </div>
+  </body>
+</html>

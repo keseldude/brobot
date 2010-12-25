@@ -1,0 +1,308 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brobot.core.bot &mdash; brobot v1.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="brobot v1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">brobot v1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brobot.core.bot</h1><div class="highlight"><pre>
+<span class="c">#===============================================================================</span>
+<span class="c"># brobot</span>
+<span class="c"># Copyright (C) 2010  Michael Keselman</span>
+<span class="c"># </span>
+<span class="c"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c"># </span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c"># </span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;</span>
+<span class="c">#===============================================================================</span>
+
+<span class="kn">from</span> <span class="nn">irc.clients</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span> <span class="nn">irc.structures</span> <span class="kn">import</span> <span class="n">Server</span>
+<span class="kn">from</span> <span class="nn">irc.events</span> <span class="kn">import</span> <span class="n">Events</span>
+<span class="kn">from</span> <span class="nn">threading</span> <span class="kn">import</span> <span class="n">Thread</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Plugin"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.Plugin">[docs]</a><span class="k">class</span> <span class="nc">Plugin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract class, which initializes every plugin to have the essentials:</span>
+<span class="sd">    </span>
+<span class="sd">    * a name</span>
+<span class="sd">    * a link to the ircbot</span>
+<span class="sd">    * the path to the common shelf (for serialized objects).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;unnamed&#39;</span>
+    <span class="n">admin</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ircbot</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ircbot</span> <span class="o">=</span> <span class="n">ircbot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shelf_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ircbot</span><span class="o">.</span><span class="n">data_path</span><span class="p">,</span> <span class="s">&#39;shelf.db&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">NotImplementedError</span><span class="p">:</span>
+            <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+</div>
+<div class="viewcode-block" id="CommandPlugin"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.CommandPlugin">[docs]</a><span class="k">class</span> <span class="nc">CommandPlugin</span><span class="p">(</span><span class="n">Plugin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract Plugin to be used for commands.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+</div>
+<div class="viewcode-block" id="EventPlugin"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.EventPlugin">[docs]</a><span class="k">class</span> <span class="nc">EventPlugin</span><span class="p">(</span><span class="n">Plugin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract Plugin to be used for events.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+    
+</div>
+<div class="viewcode-block" id="IRCBot"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.IRCBot">[docs]</a><span class="k">class</span> <span class="nc">IRCBot</span><span class="p">(</span><span class="n">Client</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Functional implementation of Client, which serves as an IRC bot as</span>
+<span class="sd">    opposed to a fully function client.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">,</span> <span class="n">base_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span> <span class="o">=</span> <span class="n">settings</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_path</span><span class="p">,</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;data_path&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Unable to create data directory.&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register_loggers</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">pid_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">,</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;pid_filename&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_save_pid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pid_path</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">admins</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">initial_channels</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="n">servers</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">server</span> <span class="ow">in</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;servers&#39;</span><span class="p">]:</span>
+            <span class="n">irc_server</span> <span class="o">=</span> <span class="n">Server</span><span class="p">(</span><span class="n">server</span><span class="p">[</span><span class="s">&#39;host&#39;</span><span class="p">],</span> <span class="n">server</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">],</span> <span class="n">server</span><span class="p">[</span><span class="s">&#39;nick&#39;</span><span class="p">],</span>
+                                <span class="n">use_ssl</span><span class="o">=</span><span class="n">server</span><span class="p">[</span><span class="s">&#39;ssl&#39;</span><span class="p">])</span>
+            <span class="n">servers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">irc_server</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">admins</span><span class="p">[</span><span class="n">irc_server</span><span class="p">]</span> <span class="o">=</span> <span class="n">server</span><span class="p">[</span><span class="s">&#39;admins&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">initial_channels</span><span class="p">[</span><span class="n">irc_server</span><span class="p">]</span> <span class="o">=</span> <span class="n">server</span><span class="p">[</span><span class="s">&#39;channels&#39;</span><span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">plugin_path</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;plugin_path&#39;</span><span class="p">]</span>
+        
+        <span class="n">event_plugins</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;event_plugins&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="s">&#39;plugins&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">event</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="n">name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">Events</span><span class="p">,</span> <span class="n">event</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+            <span class="n">plugins</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="n">event</span><span class="p">[</span><span class="s">&#39;plugins&#39;</span><span class="p">]:</span>
+                <span class="n">split_path</span> <span class="o">=</span> <span class="n">plugin</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+                
+                <span class="n">plugin_name</span> <span class="o">=</span> <span class="n">split_path</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="n">module_path</span> <span class="o">=</span> <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">split_path</span><span class="p">)</span>
+            
+                <span class="n">module</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plugin_path</span><span class="p">,</span> <span class="n">module_path</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">split_path</span><span class="p">:</span>
+                    <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">part</span><span class="p">)</span>
+                
+                <span class="n">plugins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">)(</span><span class="bp">self</span><span class="p">))</span>
+            
+            <span class="n">event_plugins</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">plugins</span>
+                
+        <span class="nb">super</span><span class="p">(</span><span class="n">IRCBot</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">servers</span><span class="p">,</span> <span class="n">event_plugins</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">command_plugins</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">command_prefix</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;command_prefix&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s">&#39;version_string&#39;</span><span class="p">]</span>
+    
+    <span class="k">def</span> <span class="nf">_register_loggers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">root_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">root_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        
+        <span class="n">fh</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&#39;log_filename&#39;</span><span class="p">]),</span>
+                                 <span class="n">encoding</span><span class="o">=</span><span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="n">fh_fmt</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - </span><span class="si">%(levelname)-8s</span><span class="s">: </span><span class="se">\</span>
+<span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+        <span class="n">fh</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">fh_fmt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&#39;debug&#39;</span><span class="p">]:</span>
+            <span class="n">ch</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+            
+            <span class="n">ch_fmt</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(levelname)-8s</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+            
+            <span class="n">ch</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">ch_fmt</span><span class="p">)</span>
+            <span class="n">ch</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">root_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">ch</span><span class="p">)</span>
+            <span class="n">fh</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fh</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+        
+        <span class="n">root_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_save_pid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pid_path</span><span class="p">):</span>
+        <span class="n">pid</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pid_path</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pidfile</span><span class="p">:</span>
+            <span class="n">pidfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pid</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+        <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">on_welcome</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">initial_channels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_channels</span><span class="p">[</span><span class="n">connection</span><span class="o">.</span><span class="n">server</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">initial_channels</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="o">*</span><span class="n">initial_channels</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">on_initial_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="p">[</span><span class="s">&#39;command_plugins&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">msg_type</span><span class="p">,</span> <span class="n">command_plugins</span> <span class="ow">in</span> <span class="n">items</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">command_plugins</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">command_plugins</span><span class="p">[</span><span class="n">msg_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">plugins</span> <span class="o">=</span> <span class="p">{}</span>
+            
+            <span class="k">for</span> <span class="n">command_plugin</span> <span class="ow">in</span> <span class="n">command_plugins</span><span class="p">:</span>
+                <span class="n">split_path</span> <span class="o">=</span> <span class="n">command_plugin</span><span class="p">[</span><span class="s">&#39;path&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+                
+                <span class="n">plugin_name</span> <span class="o">=</span> <span class="n">split_path</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="n">module_path</span> <span class="o">=</span> <span class="s">&#39;.&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">split_path</span><span class="p">)</span>
+                
+                <span class="n">module</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plugin_path</span><span class="p">,</span> <span class="n">module_path</span><span class="p">))</span>
+                <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">split_path</span><span class="p">:</span>
+                    <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">part</span><span class="p">)</span>
+                    
+                <span class="n">commands</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">command_plugin</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">])</span>
+                <span class="n">plugins</span><span class="p">[</span><span class="n">commands</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">plugin_name</span><span class="p">)(</span><span class="bp">self</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="IRCBot.is_admin"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.IRCBot.is_admin">[docs]</a>    <span class="k">def</span> <span class="nf">is_admin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">nick</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns whether a given nick is one of the administrators of the</span>
+<span class="sd">        bot.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">nick</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">admins</span><span class="p">[</span><span class="n">server</span><span class="p">]</span>
+    </div>
+<div class="viewcode-block" id="IRCBot.get_version"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.IRCBot.get_version">[docs]</a>    <span class="k">def</span> <span class="nf">get_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns the version of the bot.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span>
+    </div>
+<div class="viewcode-block" id="IRCBot.process_message"><a class="viewcode-back" href="../../../modules/core.bot.html#brobot.core.bot.IRCBot.process_message">[docs]</a>    <span class="k">def</span> <span class="nf">process_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">pubmsg</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Processes a message, determining whether it is a bot command, and</span>
+<span class="sd">        taking action if it is.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">message</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">command_prefix</span><span class="p">:</span>
+            <span class="n">tokens</span> <span class="o">=</span> <span class="n">message</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">u&#39; &#39;</span><span class="p">)</span>
+            <span class="n">command</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            
+            <span class="n">both</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">command_plugins</span><span class="p">[</span><span class="s">&#39;BOTH&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">pubmsg</span><span class="p">:</span>
+                <span class="n">either</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">command_plugins</span><span class="p">[</span><span class="s">&#39;PUBMSG&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">either</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">command_plugins</span><span class="p">[</span><span class="s">&#39;PRIVMSG&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
+            
+            <span class="k">for</span> <span class="n">commands</span><span class="p">,</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">both</span><span class="p">,</span> <span class="n">either</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">command</span> <span class="ow">in</span> <span class="n">commands</span><span class="p">:</span>
+                    <span class="n">plugin</span><span class="o">.</span><span class="n">process</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+                    <span class="k">break</span>
+    </div>
+    <span class="k">def</span> <span class="nf">_on_msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">pubmsg</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">process</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">process_message</span><span class="p">,</span>
+                            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">),</span> <span class="n">kwargs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;pubmsg&#39;</span><span class="p">:</span> <span class="n">pubmsg</span><span class="p">})</span>
+        <span class="n">process</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">on_privmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_msg</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">pubmsg</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">on_pubmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_on_msg</span><span class="p">(</span><span class="n">connection</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">pubmsg</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">brobot v1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Michael Keselman.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.5.
+    </div>
+  </body>
+</html>

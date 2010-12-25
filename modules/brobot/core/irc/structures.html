@@ -1,0 +1,334 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>brobot.core.irc.structures &mdash; brobot v1.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="brobot v1.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">brobot v1.0 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for brobot.core.irc.structures</h1><div class="highlight"><pre>
+<span class="c">#===============================================================================</span>
+<span class="c"># brobot</span>
+<span class="c"># Copyright (C) 2010  Michael Keselman</span>
+<span class="c"># </span>
+<span class="c"># This program is free software: you can redistribute it and/or modify</span>
+<span class="c"># it under the terms of the GNU General Public License as published by</span>
+<span class="c"># the Free Software Foundation, either version 3 of the License, or</span>
+<span class="c"># (at your option) any later version.</span>
+<span class="c"># </span>
+<span class="c"># This program is distributed in the hope that it will be useful,</span>
+<span class="c"># but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="c"># MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="c"># GNU General Public License for more details.</span>
+<span class="c"># </span>
+<span class="c"># You should have received a copy of the GNU General Public License</span>
+<span class="c"># along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;</span>
+<span class="c">#===============================================================================</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Contains the core structures needed for IRC.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">threading</span> <span class="kn">import</span> <span class="n">Lock</span>
+
+<div class="viewcode-block" id="Server"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Server">[docs]</a><span class="k">class</span> <span class="nc">Server</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An IRC server represenation, which stores the host, port, and nick of the</span>
+<span class="sd">    user connected. Supports ssl (soon).&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">nick</span><span class="p">,</span> <span class="n">use_ssl</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nick</span> <span class="o">=</span> <span class="n">nick</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_ssl</span> <span class="o">=</span> <span class="n">use_ssl</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">actual_host</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actual_nick</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">actual_host</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">actual_host</span> <span class="ow">and</span>\
+                <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">port</span> <span class="ow">and</span>\
+                <span class="bp">self</span><span class="o">.</span><span class="n">actual_nick</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">actual_nick</span>
+    
+</div>
+<div class="viewcode-block" id="Channel"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Channel">[docs]</a><span class="k">class</span> <span class="nc">Channel</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An IRC channel representation.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">users</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">modes</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server</span> <span class="o">=</span> <span class="n">server</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode_lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">users</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">users</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">if</span> <span class="n">modes</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">modes</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">server</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
+    
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+    
+    <span class="k">def</span> <span class="nf">in_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nick</span><span class="p">):</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">channel_user</span><span class="p">(</span><span class="n">nick</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">user</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span>
+    
+<div class="viewcode-block" id="Channel.add_user"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Channel.add_user">[docs]</a>    <span class="k">def</span> <span class="nf">add_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds a user to the list of users if it is not already there.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_lock</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">user</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Channel.remove_user"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Channel.remove_user">[docs]</a>    <span class="k">def</span> <span class="nf">remove_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Tries to remove a user from the set of users in the channel, and</span>
+<span class="sd">        fails silently.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_lock</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">pass</span>
+    </div>
+    <span class="k">def</span> <span class="nf">find_user</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nick</span><span class="p">):</span>
+        <span class="n">search_user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">channel_user</span><span class="p">(</span><span class="n">nick</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">users</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">user</span> <span class="o">==</span> <span class="n">search_user</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">user</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    
+<div class="viewcode-block" id="Channel.add_mode"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Channel.add_mode">[docs]</a>    <span class="k">def</span> <span class="nf">add_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adds a mode to the list of modes if it is not already there.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_lock</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">modes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">modes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Channel.remove_mode"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Channel.remove_mode">[docs]</a>    <span class="k">def</span> <span class="nf">remove_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Tries to remove a mode from the set of modes in the channel, and</span>
+<span class="sd">        fails silently.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_lock</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">modes</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">pass</span>
+    
+</div></div>
+<div class="viewcode-block" id="Mode"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.Mode">[docs]</a><span class="k">class</span> <span class="nc">Mode</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An IRC mode representation, which stores the mode character, the</span>
+<span class="sd">    parameter, and whether it is on.&quot;&quot;&quot;</span>
+    <span class="n">SWITCH</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">,</span> <span class="s">&#39;+&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">character</span><span class="p">,</span> <span class="n">param</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">character</span> <span class="o">=</span> <span class="n">character</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param</span> <span class="o">=</span> <span class="n">param</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on</span> <span class="o">=</span> <span class="n">on</span>
+    
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">character</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">character</span>
+    
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SWITCH</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">on</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">character</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">param</span><span class="p">:</span>
+            <span class="n">mode</span> <span class="o">+=</span> <span class="s">&#39; </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">param</span>
+        
+        <span class="k">return</span> <span class="n">mode</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">parse_modes</span><span class="p">(</span><span class="n">modes</span><span class="p">,</span> <span class="n">mode_args</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">modes</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;+&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">modes</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        
+        <span class="n">on</span> <span class="o">=</span> <span class="n">modes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;+&#39;</span>
+        
+        <span class="k">if</span> <span class="s">&#39;+&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+            <span class="n">on_modes</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="n">off_modes</span> <span class="o">=</span> <span class="n">modes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">elif</span> <span class="s">&#39;-&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">modes</span><span class="p">:</span>
+            <span class="n">on_modes</span> <span class="o">=</span> <span class="n">modes</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">off_modes</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">first_pass</span> <span class="o">=</span> <span class="n">modes</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;+&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">first_pass</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">second_pass</span> <span class="o">=</span> <span class="n">first_pass</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">on_modes</span><span class="p">,</span> <span class="n">off_modes</span> <span class="o">=</span> <span class="n">first_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">second_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">second_pass</span> <span class="o">=</span> <span class="n">first_pass</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">on_modes</span><span class="p">,</span> <span class="n">off_modes</span> <span class="o">=</span> <span class="n">second_pass</span>
+        
+        <span class="n">arg_index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">on_modes</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">off_modes</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">mode_args</span><span class="p">)</span>
+        
+        <span class="n">l</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="k">if</span> <span class="n">on</span><span class="p">:</span>
+            <span class="n">iterlist</span> <span class="o">=</span> <span class="p">(</span><span class="n">on_modes</span><span class="p">,</span> <span class="n">off_modes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">iterlist</span> <span class="o">=</span> <span class="p">(</span><span class="n">off_modes</span><span class="p">,</span> <span class="n">on_modes</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">mode_list</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">iterlist</span><span class="p">):</span>
+            <span class="n">switched_on</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">((</span><span class="n">j</span> <span class="o">+</span> <span class="n">on</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">mode_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">arg_index</span><span class="p">:</span>
+                    <span class="n">l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">switched_on</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Mode</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="n">param</span><span class="o">=</span><span class="n">mode_args</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">on</span><span class="o">=</span><span class="n">switched_on</span><span class="p">))</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="k">return</span> <span class="n">l</span>
+    
+</div>
+<div class="viewcode-block" id="User"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.User">[docs]</a><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An IRC user represenation, storing nick, username, host, and channel</span>
+<span class="sd">    status.&quot;&quot;&quot;</span>
+    <span class="n">NORMAL</span> <span class="o">=</span> <span class="s">&#39; &#39;</span>
+    <span class="n">VOICE</span> <span class="o">=</span> <span class="s">&#39;+&#39;</span>
+    <span class="n">HALFOP</span> <span class="o">=</span> <span class="s">&#39;%&#39;</span>
+    <span class="n">OP</span> <span class="o">=</span> <span class="s">&#39;@&#39;</span>
+    <span class="n">PROTECTED</span> <span class="o">=</span> <span class="s">&#39;&amp;&#39;</span>
+    <span class="n">FOUNDER</span> <span class="o">=</span> <span class="s">&#39;~&#39;</span>
+    
+    <span class="n">STATUSES</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">NORMAL</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">VOICE</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+        <span class="n">HALFOP</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">OP</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">PROTECTED</span><span class="p">:</span> <span class="mi">16</span><span class="p">,</span>
+        <span class="n">FOUNDER</span><span class="p">:</span> <span class="mi">32</span>
+    <span class="p">}</span>
+    
+    <span class="n">MODES</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;v&#39;</span><span class="p">:</span> <span class="n">VOICE</span><span class="p">,</span>
+        <span class="s">&#39;h&#39;</span><span class="p">:</span> <span class="n">HALFOP</span><span class="p">,</span>
+        <span class="s">&#39;o&#39;</span><span class="p">:</span> <span class="n">OP</span><span class="p">,</span>
+        <span class="s">&#39;a&#39;</span><span class="p">:</span> <span class="n">PROTECTED</span><span class="p">,</span>
+        <span class="s">&#39;q&#39;</span><span class="p">:</span> <span class="n">FOUNDER</span>
+    <span class="p">}</span>
+    
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nick</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nick</span> <span class="o">=</span> <span class="n">nick</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+        
+        <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">STATUSES</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">STATUSES</span><span class="p">[</span><span class="n">status</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">STATUSES</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">]</span>
+    
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nick</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">nick</span> <span class="ow">and</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">username</span> <span class="ow">and</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">host</span>
+    
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">nick</span>
+    
+    <span class="k">def</span> <span class="nf">add_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">STATUSES</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">MODES</span><span class="p">[</span><span class="n">mode</span><span class="o">.</span><span class="n">character</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">|=</span> <span class="n">status</span>
+    
+    <span class="k">def</span> <span class="nf">remove_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">STATUSES</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">MODES</span><span class="p">[</span><span class="n">mode</span><span class="o">.</span><span class="n">character</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">-=</span> <span class="n">status</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">channel_user</span><span class="p">(</span><span class="n">nick</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">User</span><span class="p">(</span><span class="n">nick</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">User</span><span class="o">.</span><span class="n">NORMAL</span><span class="p">)</span>
+    
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="User.parse_user"><a class="viewcode-back" href="../../../../modules/core.irc.structures.html#brobot.core.irc.structures.User.parse_user">[docs]</a>    <span class="k">def</span> <span class="nf">parse_user</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper function that parses user information into a User object.&quot;&quot;&quot;</span>
+        <span class="n">username</span><span class="p">,</span> <span class="n">host</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">user</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">User</span><span class="o">.</span><span class="n">STATUSES</span><span class="p">:</span>
+            <span class="n">status</span><span class="p">,</span> <span class="n">nick</span> <span class="o">=</span> <span class="n">user</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">user</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">NORMAL</span>
+            <span class="n">split_user</span> <span class="o">=</span> <span class="n">user</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;@&#39;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">split_user</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">nick</span> <span class="o">=</span> <span class="n">split_user</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">info</span><span class="p">,</span> <span class="n">host</span> <span class="o">=</span> <span class="n">split_user</span>
+                <span class="n">nick</span><span class="p">,</span> <span class="n">username</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;!&#39;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">User</span><span class="p">(</span><span class="n">nick</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+    </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">brobot v1.0 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, Michael Keselman.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.5.
+    </div>
+  </body>
+</html>
