@@ -1,4 +1,4 @@
-# BROBOT
+# BROBOT [(Plugins)](http://github.com/keseldude/brobot-plugins)
 
 ## About
 brobot is an simple, extensible IRC bot written in Python, created by Michael Keselman.
