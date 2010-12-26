@@ -22,7 +22,7 @@ class CommandsPlugin(bot.CommandPlugin):
     name = 'commands'
     def process(self, connection, source, target, args):
         names = []
-        for msg_type, plugins in self.ircbot.command_plugins.iteritems():
+        for plugins in self.ircbot.command_plugins.itervalues():
             for plugin in plugins.itervalues():
                 if not plugin.admin:
                     names.append(plugin.name)

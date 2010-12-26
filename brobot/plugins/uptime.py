@@ -17,7 +17,6 @@
 #===============================================================================
 
 from core import bot
-from core.irc.structures import User
 from datetime import datetime
 
 class UptimePlugin(bot.CommandPlugin):
