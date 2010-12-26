@@ -33,15 +33,20 @@ class URITitlePlugin(bot.EventPlugin):
         except IOError, e:
             log.error(unicode(e))
             return None
+        
         try:
-            content_type = connected_uri.info()['Content-Type']
-            if content_type.startswith('text/html'):
-                soup = BeautifulSoup(connected_uri)
-                
-                if soup.title is not None:
-                    title = BeautifulSoup(u' '.join(soup.title.string.split()),
-                                convertEntities=BeautifulSoup.XHTML_ENTITIES)
-                    return unicode(title)
+            info = connected_uri.info()
+            if 'Content-Type' in info:
+                content_type = info['Content-Type']
+                if content_type.startswith('text/html'):
+                    soup = BeautifulSoup(connected_uri)
+                    
+                    if soup.title is not None:
+                        title = \
+                            BeautifulSoup(u' '.join(soup.title.string.split()),
+                                          convertEntities=\
+                                                BeautifulSoup.XHTML_ENTITIES)
+                        return unicode(title)
         finally:
             connected_uri.close()
             del connected_uri
