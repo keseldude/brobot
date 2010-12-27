@@ -21,5 +21,8 @@ from core import bot
 class BotPlugin(bot.CommandPlugin):
     name = 'bot'
     def process(self, connection, source, target, args):
-        self.ircbot.privmsg(connection, target, ':)')
+        return {'action': self.Action.PRIVMSG,
+                'target': target,
+                'message': (':)',)
+                }
     

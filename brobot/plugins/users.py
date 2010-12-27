@@ -23,7 +23,10 @@ class UsersPlugin(bot.CommandPlugin):
     def process(self, connection, source, target, args):
         channel = self.ircbot.find_channel(connection.server, target)
         if channel is not None:
-            self.ircbot.privmsg(connection, target,
-                '%d Users in the channel.' % len(channel.users))
+            num_users = len(channel.users)
+            return {'action': self.Action.PRIVMSG,
+                    'target': target,
+                    'message': (u'%d Users in the channel.' % num_users,)
+                    }
     
 

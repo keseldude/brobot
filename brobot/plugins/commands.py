@@ -22,11 +22,13 @@ class CommandsPlugin(bot.CommandPlugin):
     name = 'commands'
     def process(self, connection, source, target, args):
         names = []
-        for plugins in self.ircbot.command_plugins.itervalues():
+        for msg_type, plugins in self.ircbot.command_plugins.iteritems():
             for plugin in plugins.itervalues():
                 if not plugin.admin:
                     names.append(plugin.name)
         
-        self.ircbot.privmsg(connection, target,
-                            'Commands: ' + ' '.join(sorted(names)))
+        return {'action': self.Action.PRIVMSG,
+                'target': target,
+                'message': ('Commands: ' + ' '.join(sorted(names)),)
+                }
     

@@ -17,6 +17,7 @@
 #===============================================================================
 
 from core import bot
+from core.irc.structures import User
 from datetime import datetime
 
 class UptimePlugin(bot.CommandPlugin):
@@ -45,5 +46,8 @@ class UptimePlugin(bot.CommandPlugin):
     
     def process(self, connection, source, target, args):
         delta = datetime.utcnow() - self.start_time
-        self.ircbot.privmsg(connection, target, self.format_timedelta(delta))
+        return {'action': self.Action.PRIVMSG,
+                'target': target,
+                'message': (self.format_timedelta(delta),)
+                }
     

@@ -49,7 +49,26 @@ class Plugin(object):
 
 class CommandPlugin(Plugin):
     """Abstract Plugin to be used for commands."""
-    def process(self, connection, source, target, args):
+    class Action(object):
+        PRIVMSG = staticmethod(lambda bot: bot.privmsg)
+        NOTICE  = staticmethod(lambda bot: bot.notice)
+    
+    def _process(self, connection, source, target, args):
+        result = self.process(connection, source, target, args)
+        if not result:
+            return
+        
+        try:
+            action = result['action'](self.ircbot)
+            target = result['target']
+            message = result['message']
+        except KeyError:
+            log.error(u'Invalid plugin response.')
+        else:
+            for line in message:
+                action(connection, target, line)
+    
+    def process(self, source, target, args):
         raise NotImplementedError
     
 
@@ -147,21 +166,13 @@ class IRCBot(Client):
         with open(pid_path, 'w') as pidfile:
             pidfile.write(str(pid))
     
-    def on_connect(self, connection):
-        pass
-    
-    def on_welcome(self, connection, source, target, message):
-        initial_channels = self.initial_channels[connection.server]
-        if initial_channels:
-            self.join(connection, *initial_channels)
-    
-    def on_initial_connect(self):
+    def _register_command_plugins(self):
         items = self.settings['command_plugins'].iteritems()
         for msg_type, command_plugins in items:
+            self.command_plugins[msg_type] = plugins = {}
+            
             if command_plugins is None:
                 continue
-            
-            self.command_plugins[msg_type] = plugins = {}
             
             for command_plugin in command_plugins:
                 split_path = command_plugin['path'].split('.')
@@ -175,6 +186,37 @@ class IRCBot(Client):
                     
                 commands = tuple(command_plugin['commands'])
                 plugins[commands] = getattr(module, plugin_name)(self)
+            
+        
+    
+    def register_command_plugin(self, command, plugin):
+        both = self.command_plugins['BOTH']
+        for commands in both.iterkeys():
+            if command in commands:
+                return False
+        self.command_plugins['BOTH'][(command,)] = plugin(self)
+        
+        return True
+    
+    def unregister_command_plugin(self, command):
+        commands = (command,)
+        both = self.command_plugins['BOTH']
+        for cmds in both.iterkeys():
+            if cmds == commands:
+                del both[cmds]
+                return True
+        return False
+    
+    def on_connect(self, connection):
+        pass
+    
+    def on_welcome(self, connection, source, target, message):
+        initial_channels = self.initial_channels[connection.server]
+        if initial_channels:
+            self.join(connection, *initial_channels)
+    
+    def on_initial_connect(self):
+        self._register_command_plugins()
     
     def is_admin(self, server, nick):
         """Returns whether a given nick is one of the administrators of the
@@ -189,8 +231,12 @@ class IRCBot(Client):
         """Processes a message, determining whether it is a bot command, and
         taking action if it is."""
         if message[0] == self.command_prefix:
-            tokens = message[1:].strip().split(u' ')
-            command, args = tokens[0], tokens[1:]
+            if message[1:2] == u' ':
+                command = u' '
+                args = message[2:].strip().split(u' ')
+            else:
+                tokens = message[1:].strip().split(u' ')
+                command, args = tokens[0], tokens[1:]
             
             both = self.command_plugins['BOTH'].iteritems()
             if is_pubmsg:
@@ -200,7 +246,7 @@ class IRCBot(Client):
             
             for commands, plugin in itertools.chain(both, either):
                 if command in commands:
-                    plugin.process(connection, source, target, args)
+                    plugin._process(connection, source, target, args)
                     break
     
     def _on_msg(self, connection, source, target, message, is_pubmsg):
