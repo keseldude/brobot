@@ -3,6 +3,7 @@ debug: False
 servers:
     - host: irc.example.com
       port: 6667
+      ssl: false
       nick: brobot
       admins:
           - you
