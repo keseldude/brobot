@@ -18,7 +18,7 @@ brobot is an simple, extensible IRC bot written in Python, created by Michael Ke
     
 2. Copy the example settings file
 
-        $ cp settings.example.yaml settings.yaml
+        $ cp settings.example.yml settings.yml
     
 3. Modify the settings to connect to the right servers, channels, etc.
 4. Optionally write some plugins and put them in the plugins directory
