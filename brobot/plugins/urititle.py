@@ -24,9 +24,15 @@ from BeautifulSoup import BeautifulSoup
 
 log = logging.getLogger(__name__)
 
+class FirefoxURLopener(urllib.FancyURLopener):
+    version = "Mozilla/5.0 (X11; U; FreeBSD i386; en-US; rv:1.9.2.9) \
+Gecko/20100913 Firefox/3.6.9"
+
+urllib._urlopener = FirefoxURLopener()
+
 class URITitlePlugin(bot.EventPlugin):
     name = 'uri-title'
-    URI_RE = re.compile(r'https?://[A-Za-z0-9\-\._/&%#=?+]+')
+    URI_RE = re.compile(r'https?://[A-Za-z0-9\-\.\'_/&%#=?+]+')
     def get_title(self, uri):
         try:
             connected_uri = urllib.urlopen(uri)

@@ -21,7 +21,7 @@ from core.irc.structures import User
 from datetime import datetime
 
 class UptimePlugin(bot.CommandPlugin):
-    name = 'version'
+    name = 'uptime'
     def load(self):
         self.start_time = datetime.utcnow()
     
