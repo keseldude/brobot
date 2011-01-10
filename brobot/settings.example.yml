@@ -54,7 +54,5 @@ plugin_path: plugins
 data_path: data
 log_filename: brobot.log
 pid_filename: brobot.pid
-python_binary: # E.g., /usr/bin/python
-brobot_path:  # E.g., ~/repos/brobot.git/brobot/brobot.py
 command_prefix: '!'
-version_string: brobot v0.9
+version_string: brobot v0.93

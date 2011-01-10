@@ -68,7 +68,7 @@ class CommandPlugin(Plugin):
             for line in message:
                 action(connection, target, line)
     
-    def process(self, source, target, args):
+    def process(self, connection, source, target, args):
         raise NotImplementedError
     
 
@@ -81,10 +81,11 @@ class EventPlugin(Plugin):
 class IRCBot(Client):
     """Functional implementation of Client, which serves as an IRC bot as
     opposed to a fully function client."""
-    def __init__(self, settings, base_path):
+    def __init__(self, settings):
         self.settings = settings
         
-        self.data_path = os.path.join(base_path, settings['data_path'])
+        self.data_path = os.path.join(settings['base_path'],
+                                      settings['data_path'])
         if not os.path.exists(self.data_path):
             try:
                 os.mkdir(self.data_path)

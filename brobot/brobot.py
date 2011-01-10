@@ -18,16 +18,22 @@
 
 import yaml
 import os
+import sys
 
 def main():
-    brobot_dir = os.path.dirname(os.path.abspath(__file__))
+    brobot_path = os.path.abspath(__file__)
+    brobot_dir = os.path.dirname(brobot_path)
     settings_path = os.path.join(brobot_dir, 'settings.yml')
     f = open(settings_path)
     settings = yaml.load(f)
     
+    settings['brobot_path'] = brobot_path
+    settings['base_path'] = brobot_dir
+    settings['python_binary'] = sys.executable
+    
     from core import bot
     
-    brobot = bot.IRCBot(settings, brobot_dir)
+    brobot = bot.IRCBot(settings)
     brobot.start()
 
 if __name__ == '__main__':
