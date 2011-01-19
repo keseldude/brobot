@@ -28,7 +28,11 @@ def kill(pid, signal):
         handle = kernel32.OpenProcess(1, 0, pid)
         kernel32.TerminateProcess(handle, 0)
     else:
-        os.kill(pid, signal)
+        try:
+            os.kill(pid, signal)
+        except OSError:
+            # Could not kill process. I guess it died?
+            pass
 
 def main(args):
     pid = None
