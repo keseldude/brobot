@@ -26,8 +26,9 @@ from events import Events, EventManager, EventHook
 from connections import ConnectionManager, Connection, IRCError
 from structures import Channel, Server, User, Mode
 from datetime import datetime
-from threading import Lock
+from threading import Lock, Thread
 import logging
+import time
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class Client(object):
         """Starts the Client by first connecting to all given servers and then
         starting the main loop."""
         for server in self._servers:
-            self._connect(server)
+            Thread(target=self._connect, args=(server,)).start()
         
         try:
             self.on_initial_connect()
@@ -104,25 +105,26 @@ class Client(object):
             with self.process_lock:
                 self.connection_manager.process()
     
-    def _connect(self, server):
+    def _connect(self, server, tries=5):
         """Performs a connection to the server by creating a Connection object,
         connecting it, and then registering the new Connection with the
         ConnectionManager."""
-        connection = Connection(server)
-        try:
-            connection.connect()
-        except IRCError:
-            pass
-        else:
-            self.connection_manager.register(connection)
+        for _ in xrange(tries):
+            connection = Connection(server)
+            if connection.connect():
+                self.connection_manager.register(connection)
+                return
+            time.sleep(30)
     
     def on_initial_connect(self):
         """Function performed after all servers have been connected."""
         raise NotImplementedError
     
-    def exit(self, message='Bye!'):
+    def exit(self, message=None):
         """Disconnects from every connection in the ConnectionManager with the
         given QUIT message."""
+        if message is None:
+            message = u'Bye!'
         with self.process_lock:
             self.connection_manager.exit(message)
     
@@ -205,7 +207,7 @@ class Client(object):
         better than just quitting because it also cleans things up with the
         connection manager."""
         with self.process_lock:
-            connection.disconnect(message)
+            self.connection_manager.disconnect(connection, message)
     
     def on_connect(self, connection):
         raise NotImplementedError
