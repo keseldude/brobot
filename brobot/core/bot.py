@@ -124,6 +124,7 @@ class IRCBot(Client):
                 module_path = '.'.join(split_path)
             
                 module = __import__('%s.%s' % (self.plugin_path, module_path))
+                reload(module)
                 for part in split_path:
                     module = getattr(module, part)
                 
@@ -137,6 +138,8 @@ class IRCBot(Client):
         
         self.command_prefix = settings['command_prefix']
         self.version = settings['version_string']
+        
+        self._restart = False
     
     def _register_loggers(self):
         root_logger = logging.getLogger('')
@@ -182,6 +185,7 @@ class IRCBot(Client):
                 module_path = '.'.join(split_path)
                 
                 module = __import__('%s.%s' % (self.plugin_path, module_path))
+                reload(module)
                 for part in split_path:
                     module = getattr(module, part)
                     
@@ -189,6 +193,14 @@ class IRCBot(Client):
                 plugins[commands] = getattr(module, plugin_name)(self)
             
         
+    def start(self):
+        super(IRCBot, self).start()
+        
+        return self._restart
+    
+    def restart(self):
+        self._restart = True
+        self.exit(message=u'Restarting!')
     
     def register_command_plugin(self, command, plugin):
         both = self.command_plugins['BOTH']
