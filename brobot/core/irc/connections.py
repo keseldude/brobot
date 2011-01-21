@@ -55,19 +55,26 @@ class ConnectionManager(object):
                 if not connection.connected:
                     del self.connections[sock]
         except (select.error, KeyboardInterrupt):
-            self.exit('Bye!')
+            self.exit(u'Bye!')
         else:
             for sock in in_sockets:
                 self.connections[sock].process(self.event_manager)
     
+    def disconnect(self, connection, message=u''):
+        """Closes a connection with an optional message."""
+        del self.connections[connection.socket]
+        connection.disconnect(message)
+    
     def exit(self, message=u''):
         """Closes all connections with an optional message."""
-        for connection in self.connections.values():
-            connection.disconnect(message)
+        if self.running:
+            for connection in self.connections.values():
+                del self.connections[connection.socket]
+                connection.disconnect(message)
     
     @property
     def running(self):
-        return len(self.connections)
+        return len(self.connections) > 0
 
 class Connection(object):
     """The lowest level of the IRC library. Connection takes care of connecting,
@@ -91,9 +98,16 @@ class Connection(object):
             self._socket.connect((self.server.host, self.server.port))
         except socket.error, error:
             log.error(unicode(error))
-            self.disconnect()
-        else:
-            self._connected = True
+            try:
+                self._socket.close()
+            except socket.error, error:
+                log.critical(unicode(error))
+            
+            return False
+        
+        self._connected = True
+        
+        return True
     
     def disconnect(self, message=u''):
         """Disconnects from the server with an optional message."""
