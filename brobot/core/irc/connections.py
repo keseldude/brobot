@@ -63,14 +63,14 @@ class ConnectionManager(object):
     def disconnect(self, connection, message=u''):
         """Closes a connection with an optional message."""
         del self.connections[connection.socket]
-        connection.disconnect(message)
+        if connection.socket is not None:
+            connection.disconnect(message)
     
     def exit(self, message=u''):
         """Closes all connections with an optional message."""
         if self.running:
             for connection in self.connections.values():
-                del self.connections[connection.socket]
-                connection.disconnect(message)
+                self.disconnect(connection, message)
     
     @property
     def running(self):
