@@ -109,6 +109,8 @@ class Client(object):
         """Performs a connection to the server by creating a Connection object,
         connecting it, and then registering the new Connection with the
         ConnectionManager."""
+        server.reset()
+        
         for _ in xrange(tries):
             connection = Connection(server)
             if connection.connect():
@@ -120,13 +122,17 @@ class Client(object):
         """Function performed after all servers have been connected."""
         raise NotImplementedError
     
-    def exit(self, message=None):
+    def exit(self, message=u'Bye!'):
         """Disconnects from every connection in the ConnectionManager with the
         given QUIT message."""
-        if message is None:
-            message = u'Bye!'
         with self.process_lock:
             self.connection_manager.exit(message)
+    
+    def get_server_by_name(self, name):
+        for server in self._servers:
+            if server.name == name:
+                return server
+        return None
     
     def get_server_channels(self, server):
         for channel in self.channels:

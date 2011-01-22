@@ -75,6 +75,7 @@ class ConnectionManager(object):
     @property
     def running(self):
         return len(self.connections) > 0
+    
 
 class Connection(object):
     """The lowest level of the IRC library. Connection takes care of connecting,
@@ -113,19 +114,22 @@ class Connection(object):
         """Disconnects from the server with an optional message."""
         if not self._connected or self._socket is None:
             return
-        
         try:
             if message:
                 self.send(u'QUIT :' + message)
             else:
                 self.send(u'QUIT')
-            self._socket.close()
-        except socket.error, error:
-            log.critical(unicode(error))
-            raise IRCError(error)
-        else:    
-            self._socket = None
-            self._connected = False
+        except IRCError:
+            pass
+        else:
+            try:
+                self._socket.close()
+            except socket.error, error:
+                log.critical(unicode(error))
+                raise IRCError(error)
+        
+        self._socket = None
+        self._connected = False
     
     @property
     def connected(self):
@@ -241,6 +245,6 @@ class Connection(object):
         try:
             self._socket.send(message + '\r\n')
         except socket.error, error:
-            log.critical(unicode(error))
-            raise IRCError('Unable to send message...')
+            log.error(unicode(error))
+            raise IRCError(u'Unable to send message.')
     

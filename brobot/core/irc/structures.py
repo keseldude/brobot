@@ -25,12 +25,17 @@ from threading import Lock
 class Server(object):
     """An IRC server represenation, which stores the host, port, and nick of the
     user connected. Supports ssl (soon)."""
-    def __init__(self, host, port, nick, use_ssl=False):
+    def __init__(self, host, port, nick, name='unnamed', use_ssl=False):
         self.host = host
         self.port = port
         self.nick = nick
+        self.name = name
         self.use_ssl = use_ssl
         
+        self.actual_host = ''
+        self.actual_nick = ''
+    
+    def reset(self):
         self.actual_host = ''
         self.actual_nick = ''
     

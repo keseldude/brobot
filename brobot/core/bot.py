@@ -103,7 +103,7 @@ class IRCBot(Client):
         servers = []
         for server in settings['servers']:
             irc_server = Server(server['host'], server['port'], server['nick'],
-                                use_ssl=server['ssl'])
+                                name=server['name'], use_ssl=server['ssl'])
             servers.append(irc_server)
             self.admins[irc_server] = server['admins']
             self.initial_channels[irc_server] = server['channels']
