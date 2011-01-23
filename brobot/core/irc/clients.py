@@ -94,7 +94,7 @@ class Client(object):
         """Starts the Client by first connecting to all given servers and then
         starting the main loop."""
         for server in self._servers:
-            Thread(target=self._connect, args=(server,)).start()
+            self._connect(server)
         
         try:
             self.on_initial_connect()
@@ -105,18 +105,29 @@ class Client(object):
             with self.process_lock:
                 self.connection_manager.process()
     
+    def __connect(self, server):
+        connection = Connection(server)
+        connected = connection.connect()
+        if connected:
+            self.connection_manager.register(connection)
+        
+        return connected
+    
+    def _try_connect(self, server, tries=4):
+         for _ in xrange(tries):
+            if self.__connect(server):
+                return
+            time.sleep(30)
+    
     def _connect(self, server, tries=5):
         """Performs a connection to the server by creating a Connection object,
         connecting it, and then registering the new Connection with the
         ConnectionManager."""
         server.reset()
         
-        for _ in xrange(tries):
-            connection = Connection(server)
-            if connection.connect():
-                self.connection_manager.register(connection)
-                return
-            time.sleep(30)
+        if not self.__connect(server):
+            Thread(target=self._try_connect, args=(server,),
+                   kwargs=dict(tries=tries)).start()
     
     def on_initial_connect(self):
         """Function performed after all servers have been connected."""
