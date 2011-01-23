@@ -58,7 +58,11 @@ class ConnectionManager(object):
             self.exit(u'Bye!')
         else:
             for sock in in_sockets:
-                self.connections[sock].process(self.event_manager)
+                connection = self.connections[sock]
+                if connection.socket is None:
+                    del self.connections[sock]
+                else:
+                    connection.process(self.event_manager)
     
     def disconnect(self, connection, message=u''):
         """Closes a connection with an optional message."""

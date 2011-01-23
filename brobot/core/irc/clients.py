@@ -23,7 +23,7 @@ using this library would write.
 """
 
 from events import Events, EventManager, EventHook
-from connections import ConnectionManager, Connection, IRCError
+from connections import ConnectionManager, Connection
 from structures import Channel, Server, User, Mode
 from datetime import datetime
 from threading import Lock, Thread
@@ -113,21 +113,20 @@ class Client(object):
         
         return connected
     
-    def _try_connect(self, server, tries=4):
-         for _ in xrange(tries):
+    def _try_connect(self, server):
+        while True:
             if self.__connect(server):
                 return
             time.sleep(30)
     
-    def _connect(self, server, tries=5):
+    def _connect(self, server):
         """Performs a connection to the server by creating a Connection object,
         connecting it, and then registering the new Connection with the
         ConnectionManager."""
         server.reset()
         
         if not self.__connect(server):
-            Thread(target=self._try_connect, args=(server,),
-                   kwargs=dict(tries=tries)).start()
+            Thread(target=self._try_connect, args=(server,)).start()
     
     def on_initial_connect(self):
         """Function performed after all servers have been connected."""
@@ -369,8 +368,6 @@ class Client(object):
                                          message))
     
     def _on_error(self, connection, message):
-        if u'ping timeout' in message.lower():
-            self._connect(connection.server)
-        else:
-            log.error(unicode(message))
+        log.error(message)
+        self._connect(connection.server)
     
