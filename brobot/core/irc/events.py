@@ -48,6 +48,7 @@ class EventHook(object):
 class Events(object):
     CONNECT = 'CONNECT'
     PING = 'PING'
+    PONG = 'PONG'
     MODE = 'MODE'
     UMODE = 'UMODE'
     JOIN = 'JOIN'

@@ -26,7 +26,7 @@ from events import Events, EventManager, EventHook
 from connections import ConnectionManager, Connection
 from structures import Channel, Server, User, Mode
 from datetime import datetime
-from threading import Lock, Thread
+from threading import Lock, Thread, Timer
 import logging
 import time
 
@@ -56,7 +56,6 @@ class Client(object):
     def __init__(self, servers, event_plugins=None):
         self.channels = []
         self._servers = servers
-        self.pinged = False
         
         if event_plugins is None:
             event_plugins = {}
@@ -218,6 +217,13 @@ class Client(object):
         reason."""
         connection.send('KICK %s %s :%s' % (channel, user, reason))
     
+    def ping(self, connection, message=''):
+        """Pings a server on a given connection."""
+        if message:
+            connection.send('PING %s' % message)
+        else:
+            connection.send('PING')
+    
     def quit(self, connection, message=u''):
         """Disconnects the given connection with the given message. This is
         better than just quitting because it also cleans things up with the
@@ -243,6 +249,7 @@ class Client(object):
     
     def _on_welcome(self, connection, source, target, message):
         connection.server.actual_nick = target
+        
         try:
             self.on_welcome(connection, source, target, message)
         except NotImplementedError:

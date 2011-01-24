@@ -38,10 +38,16 @@ class ConnectionManager(object):
     def __init__(self, event_manager):
         self.connections = {} # socket -> connection
         self.event_manager = event_manager
+        self._running = False
+    
+    @property
+    def running(self):
+        return self._running
     
     def register(self, connection):
         """Registers a connection to the ConnectionManager and hooks in the
         CONNECT event."""
+        self._running = True
         self.connections[connection.socket] = connection
         self.event_manager.hook(Events.CONNECT, connection)
     
@@ -54,7 +60,9 @@ class ConnectionManager(object):
             for sock, connection in self.connections.items():
                 if not connection.connected:
                     del self.connections[sock]
-        except (select.error, KeyboardInterrupt):
+        except select.error:
+            pass
+        except KeyboardInterrupt:
             self.exit(u'Bye!')
         else:
             for sock in in_sockets:
@@ -72,13 +80,11 @@ class ConnectionManager(object):
     
     def exit(self, message=u''):
         """Closes all connections with an optional message."""
-        if self.running:
+        if self._running:
             for connection in self.connections.values():
                 self.disconnect(connection, message)
-    
-    @property
-    def running(self):
-        return len(self.connections) > 0
+            
+            self._running = False
     
 
 class Connection(object):
@@ -88,7 +94,7 @@ class Connection(object):
     def __init__(self, server):
         self._connected = False
         self.server = server
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         if self.server.use_ssl:
             if ssl is None:
                 error_msg = u'SSL connections require the python ssl library.'
