@@ -52,6 +52,9 @@ class Brobot(object):
             self.load_ircbot()
             restart = self.ircbot.start()
     
+    def exit(self):
+        self.ircbot.exit()
+    
     def load_settings(self):
         f = open(self.settings_path)
         settings = yaml.load(f)
@@ -66,7 +69,10 @@ class Brobot(object):
 def main():
     brobot_path = os.path.abspath(__file__)
     brobot = Brobot(brobot_path)
-    brobot.start()
+    try:
+        brobot.start()
+    except KeyboardInterrupt:
+        brobot.exit()
 
 if __name__ == '__main__':
     main()

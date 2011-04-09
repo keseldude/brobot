@@ -18,6 +18,7 @@
 
 from events import Events
 from structures import User
+from time import sleep
 import socket, select
 import logging
 
@@ -38,6 +39,7 @@ class ConnectionManager(object):
     def __init__(self, event_manager):
         self.connections = {} # socket -> connection
         self.event_manager = event_manager
+        self.queue = []
         self._running = False
     
     @property
@@ -52,9 +54,13 @@ class ConnectionManager(object):
         self.event_manager.hook(Events.CONNECT, connection)
     
     def process(self, timeout=0.2):
+        keys = self.connections.keys()
+        if not keys:
+            sleep(timeout)
+            return
         try:
             in_sockets, _, _ = \
-                select.select(self.connections.keys(), [], [], timeout)
+                select.select(keys, [], [], timeout)
         except socket.error, error:
             log.debug(unicode(error))
             for sock, connection in self.connections.items():
@@ -62,8 +68,6 @@ class ConnectionManager(object):
                     del self.connections[sock]
         except select.error:
             pass
-        except KeyboardInterrupt:
-            self.exit(u'Bye!')
         else:
             for sock in in_sockets:
                 connection = self.connections[sock]
@@ -74,8 +78,9 @@ class ConnectionManager(object):
     
     def disconnect(self, connection, message=u''):
         """Closes a connection with an optional message."""
-        del self.connections[connection.socket]
-        if connection.socket is not None:
+        if  connection.socket is not None \
+            and connection.socket in self.connections:
+            del self.connections[connection.socket]
             connection.disconnect(message)
     
     def exit(self, message=u''):
@@ -93,8 +98,9 @@ class Connection(object):
     events."""
     def __init__(self, server):
         self._connected = False
+        self._welcomed = False
         self.server = server
-        self._socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if self.server.use_ssl:
             if ssl is None:
                 error_msg = u'SSL connections require the python ssl library.'
@@ -103,17 +109,24 @@ class Connection(object):
             self._socket = ssl.wrap_socket(self._socket)
         self.prev_line = ''
     
+    def set_welcomed(self):
+        self._welcomed = True
+    
+    @property
+    def welcomed(self):
+        return self._welcomed
+    
     def connect(self):
         """Connects to the server specified by the Connection object."""
         try:
             self._socket.connect((self.server.host, self.server.port))
         except socket.error, error:
-            log.error(unicode(error))
+            log.error(u'Unable to connect. Probably not connected to the \
+internet.')
             try:
                 self._socket.close()
             except socket.error, error:
                 log.critical(unicode(error))
-            
             return False
         
         self._connected = True

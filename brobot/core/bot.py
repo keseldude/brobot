@@ -195,7 +195,6 @@ class IRCBot(Client):
         
     def start(self):
         super(IRCBot, self).start()
-        
         return self._restart
     
     def restart(self):

@@ -23,7 +23,7 @@ using this library would write.
 """
 
 from events import Events, EventManager, EventHook
-from connections import ConnectionManager, Connection
+from connections import ConnectionManager, Connection, IRCError
 from structures import Channel, Server, User, Mode
 from datetime import datetime
 from threading import Lock, Thread, Timer
@@ -37,14 +37,12 @@ class PluginEventManager(EventManager):
     events."""
     def __init__(self, event_hooks, event_plugins):
         super(PluginEventManager, self).__init__(event_hooks)
-        
         self.event_plugins = event_plugins
     
     def hook(self, event, connection, kwargs=None):
         """Still performs the regular event hooks, and afterward, the plugin
         hooks."""
         super(PluginEventManager, self).hook(event, connection, kwargs)
-        
         if event in self.event_plugins:
             for plugin in self.event_plugins[event]:
                 plugin.process(connection, **kwargs)
@@ -56,15 +54,14 @@ class Client(object):
     def __init__(self, servers, event_plugins=None):
         self.channels = []
         self._servers = servers
-        
         if event_plugins is None:
             event_plugins = {}
-        
         self.connection_manager = ConnectionManager(PluginEventManager({
             Events.CONNECT: EventHook(self._on_connect),
             Events.RPL_WELCOME: EventHook(self._on_welcome, source=True,
                                           target=True, message=True),
             Events.PING: EventHook(self._on_ping, message=True),
+            Events.PONG: EventHook(self._on_pong, message=True),
             Events.MODE: EventHook(self._on_mode, source=True, target=True,
                                    args=True),
             Events.UMODE: EventHook(self._on_umode, source=True, target=True,
@@ -86,19 +83,22 @@ class Client(object):
             Events.ERR_NICKNAMEINUSE: EventHook(self.on_nickname_in_use),
             Events.ERROR: EventHook(self._on_error, message=True)
         }, event_plugins))
-        
         self.process_lock = Lock()
+        self.ping_timers = {}
     
     def start(self):
         """Starts the Client by first connecting to all given servers and then
         starting the main loop."""
         for server in self._servers:
             self._connect(server)
-        
+        while not self.connection_manager.running:
+            time.sleep(3)
         try:
             self.on_initial_connect()
         except NotImplementedError:
             pass
+        
+        self._start_connection_test()
         
         while self.connection_manager.running:
             with self.process_lock:
@@ -116,16 +116,43 @@ class Client(object):
         while True:
             if self.__connect(server):
                 return
-            time.sleep(30)
+            time.sleep(10)
     
     def _connect(self, server):
         """Performs a connection to the server by creating a Connection object,
         connecting it, and then registering the new Connection with the
         ConnectionManager."""
         server.reset()
-        
-        if not self.__connect(server):
-            Thread(target=self._try_connect, args=(server,)).start()
+        t = Thread(target=self._try_connect, args=(server,))
+        t.daemon = True
+        t.start()
+    
+    def _ping_disconnect(self, connection):
+        self.quit(connection)
+        if connection.socket in self.ping_timers:
+            del self.ping_timers[connection.socket]
+        self._connect(connection.server)
+    
+    def _connection_test(self):
+        while True:
+            connections = self.connection_manager.connections
+            for sock, connection in connections.items():
+                if not connection.welcomed or sock in self.ping_timers:
+                    continue
+                message = connection.server.host
+                try:
+                    self.ping(connection, message=message)
+                except IRCError:
+                    continue
+                t = Timer(60, self._ping_disconnect, args=(connection,))
+                self.ping_timers[sock] = t
+                t.start()
+            time.sleep(10)
+    
+    def _start_connection_test(self):
+        t = Thread(target=self._connection_test)
+        t.daemon = True
+        t.start()
     
     def on_initial_connect(self):
         """Function performed after all servers have been connected."""
@@ -238,7 +265,6 @@ class Client(object):
         connection.send('NICK ' + connection.server.nick)
         connection.send('USER %s 0 * :%s' % (connection.server.nick,
                                              connection.server.nick))
-        
         try:
             self.on_connect(connection)
         except NotImplementedError:
@@ -249,11 +275,11 @@ class Client(object):
     
     def _on_welcome(self, connection, source, target, message):
         connection.server.actual_nick = target
-        
         try:
             self.on_welcome(connection, source, target, message)
         except NotImplementedError:
             pass
+        connection.set_welcomed()
     
     def on_nickname_in_use(self, connection):
         connection.server.nick = connection.server.nick + '_'
@@ -263,7 +289,6 @@ class Client(object):
         if source.nick == connection.server.actual_nick:
             channel = Channel(connection.server, message)
             self.channels.append(channel)
-
             self.mode(connection, channel)
         else:
             channel = self.find_channel(connection.server, message)
@@ -272,7 +297,6 @@ class Client(object):
     
     def _on_name_reply(self, connection, source, target, args, message):
         channel_name = args[-1]
-        
         channel = self.find_channel(connection.server, channel_name)
         if channel is not None:
             for user in message.split():
@@ -290,6 +314,9 @@ class Client(object):
         user = User.channel_user(source.nick)
         for channel in self.get_server_channels(connection.server):
             channel.remove_user(user)
+        if user.nick == connection.server.nick:
+            # TODO: Change nick to connection.server.nick
+            pass
     
     def on_privmsg(self, connection, source, target, message):
         raise NotImplementedError
@@ -373,6 +400,11 @@ class Client(object):
     def _on_ping(self, connection, message):
         connection.send('PONG %s :%s' % (connection.server.actual_host,
                                          message))
+    
+    def _on_pong(self, connection, message):
+        if connection.socket in self.ping_timers:
+            self.ping_timers[connection.socket].cancel()
+            del self.ping_timers[connection.socket]
     
     def _on_error(self, connection, message):
         log.error(message)
