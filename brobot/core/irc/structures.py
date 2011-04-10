@@ -165,7 +165,8 @@ class Mode(object):
                 if i < arg_index:
                     l.append(Mode(mode, on=switched_on))
                 else:
-                    l.append(Mode(mode, param=mode_args[i], on=switched_on))
+                    l.append(Mode(mode, param=mode_args[i - arg_index],
+                                  on=switched_on))
                 i += 1
         
         return l
