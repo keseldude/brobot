@@ -19,6 +19,7 @@
 from irc.clients import Client
 from irc.structures import Server
 from irc.events import Events
+from irc.connections import IRCError
 from threading import Thread
 import itertools
 import logging
@@ -66,7 +67,12 @@ class CommandPlugin(Plugin):
             log.error(u'Invalid plugin response.')
         else:
             for line in message:
-                action(connection, target, line)
+                try:
+                    action(connection, target, line)
+                except IRCError as e:
+                    log.error(e)
+                except Exception:
+                    pass
     
     def process(self, connection, source, target, args):
         raise NotImplementedError
@@ -191,8 +197,7 @@ class IRCBot(Client):
                     
                 commands = tuple(command_plugin['commands'])
                 plugins[commands] = getattr(module, plugin_name)(self)
-            
-        
+    
     def start(self):
         super(IRCBot, self).start()
         return self._restart
