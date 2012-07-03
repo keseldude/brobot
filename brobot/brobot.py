@@ -39,11 +39,11 @@ class Brobot(object):
         root_logger = logging.getLogger('')
         root_logger.handlers = []
         
-        for module in sys.modules.values():
+        for key, module in sys.modules.items():
             mod_path = getattr(module, '__file__', None)
             if mod_path is not None and mod_path != __file__ and \
                 mod_path.startswith(self.brobot_dir):
-                reload(module)
+                del sys.modules[key]
     
     def start(self):
         restart = self.ircbot.start()
