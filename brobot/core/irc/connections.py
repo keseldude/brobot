@@ -19,6 +19,7 @@
 from events import Events
 from structures import User
 from time import sleep
+from utils import parse_irc_line
 import socket, select
 import logging
 
@@ -183,81 +184,13 @@ internet.')
                     
                     log.debug(unicode(line, 'utf-8'))
                     
-                    line_info = self._line_info(line)
+                    line_info = parse_irc_line(self.server, line)
                     command = line_info['command']
                     del line_info['command']
                     try:
                         event_manager.hook(command, self, line_info)
                     except IRCError as e:
                         log.error('%s resulted in IRCError "%s".' % (line_info, e)
-    
-    def _line_info(self, line):
-        """Line format:
-        [:][<source>] <command> [<target>] [<args> ...][ :<message>]"""
-        raw_source, command, target, args, message = '', '', '', [], ''
-        
-        split_line = line.split(' :', 1)
-        split_line_len = len(split_line)
-        if split_line_len == 1:
-            if line.startswith(':'):
-                split_prefix = line[1:].split()
-            else:
-                split_prefix = line.split()
-        elif split_line_len == 2:
-            irc_protocol_prefix, message = split_line
-            if irc_protocol_prefix.startswith(':'):
-                split_prefix = irc_protocol_prefix[1:].split()
-            else:
-                split_prefix = irc_protocol_prefix.split()
-        
-        prefix_len = len(split_prefix)
-        
-        if prefix_len == 3:
-            raw_source, command, target = split_prefix
-            
-            if not self.server.actual_host:
-                self.server.actual_host = raw_source
-        elif prefix_len == 1:
-            command = split_prefix[0]
-        elif prefix_len == 2:
-            raw_source, command = split_prefix
-        elif prefix_len > 3:
-            (raw_source, command, target), args = (split_prefix[:3],
-                                                   split_prefix[3:])
-        
-        if not raw_source or raw_source == self.server.actual_host:
-            source = raw_source
-        else:
-            source = User.parse_user(raw_source)
-        
-        is_channel = target and target[0] in '#&+!'
-        
-        if command == Events.PRIVMSG and is_channel:
-            command = Events.PUBMSG
-        elif command == Events.MODE and not is_channel:
-            command = Events.UMODE
-        elif command == Events.NOTICE:
-            if is_channel:
-                command = Events.PUBNOTICE
-            else:
-                command = Events.PRIVNOTICE
-        
-        if self.server.actual_nick and target == self.server.actual_nick:
-            target = User.parse_user(target)
-        
-        line_info = {
-            'source': source,
-            'command': command,
-            'target': target,
-            'args': args,
-            'message': message.decode('utf-8')
-        }
-        
-        for name, value in line_info.items():
-            if not value:
-                del line_info[name]
-        
-        return line_info
     
     def send(self, message):
         """Sends a message to the server."""
