@@ -188,7 +188,7 @@ internet.')
                     del line_info['command']
                     try:
                         event_manager.hook(command, self, line_info)
-                    except IRCError, e:
+                    except IRCError as e:
                         log.error('%s resulted in IRCError "%s".' % (line_info, e)
     
     def _line_info(self, line):
