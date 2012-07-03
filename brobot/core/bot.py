@@ -109,7 +109,8 @@ class IRCBot(Client):
         servers = []
         for server in settings['servers']:
             irc_server = Server(server['host'], server['port'], server['nick'],
-                                name=server['name'], use_ssl=server['ssl'])
+                                owner=server['owner'], name=server['name'],
+                                use_ssl=server['ssl'])
             servers.append(irc_server)
             self.admins[irc_server] = server['admins']
             self.initial_channels[irc_server] = server['channels']
@@ -130,7 +131,6 @@ class IRCBot(Client):
                 module_path = '.'.join(split_path)
             
                 module = __import__('%s.%s' % (self.plugin_path, module_path))
-                reload(module)
                 for part in split_path:
                     module = getattr(module, part)
                 
@@ -191,12 +191,13 @@ class IRCBot(Client):
                 module_path = '.'.join(split_path)
                 
                 module = __import__('%s.%s' % (self.plugin_path, module_path))
-                reload(module)
                 for part in split_path:
                     module = getattr(module, part)
-                    
+                
                 commands = tuple(command_plugin['commands'])
                 plugins[commands] = getattr(module, plugin_name)(self)
+                
+                log.debug('Loaded plugin "%s"!' % plugin_name)
     
     def start(self):
         super(IRCBot, self).start()
@@ -212,7 +213,6 @@ class IRCBot(Client):
             if command in commands:
                 return False
         self.command_plugins['BOTH'][(command,)] = plugin(self)
-        
         return True
     
     def unregister_command_plugin(self, command):
