@@ -261,10 +261,11 @@ class Client(object):
     def on_connect(self, connection):
         raise NotImplementedError
     
-    def _on_connect(self, connection):
-        connection.send('NICK ' + connection.server.nick)
-        connection.send('USER %s 0 * :%s' % (connection.server.nick,
-                                             connection.server.nick))
+    def _on_connect(self, connection, nick=None):
+        if nick is None:
+            nick = connection.server.nick
+        connection.send('NICK ' + nick)
+        connection.send('USER %s 0 * :%s' % (nick, connection.server.owner))
         try:
             self.on_connect(connection)
         except NotImplementedError:
@@ -280,10 +281,10 @@ class Client(object):
         except NotImplementedError:
             pass
         connection.set_welcomed()
+        self.mode(connection, target, mode=Mode('B'))
     
     def on_nickname_in_use(self, connection):
-        connection.server.nick = connection.server.nick + '_'
-        self._on_connect(connection)
+        self._on_connect(connection, nick=connection.server.nick + '_')
     
     def _on_join(self, connection, source, message):
         if source.nick == connection.server.actual_nick:
