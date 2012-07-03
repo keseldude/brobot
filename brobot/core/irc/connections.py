@@ -190,8 +190,8 @@ internet.')
                     try:
                         event_manager.hook(command, self, line_info)
                     except IRCError as e:
-                        log.error('%s resulted in IRCError "%s".' % (line_info, e)
-    
+                        log.error('%s resulted in IRCError "%s".' % (line_info, e))
+
     def send(self, message):
         """Sends a message to the server."""
         if self._socket is None:
