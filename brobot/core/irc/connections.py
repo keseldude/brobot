@@ -186,8 +186,10 @@ internet.')
                     line_info = self._line_info(line)
                     command = line_info['command']
                     del line_info['command']
-                    
-                    event_manager.hook(command, self, line_info)
+                    try:
+                        event_manager.hook(command, self, line_info)
+                    except IRCError, e:
+                        log.error('%s resulted in IRCError "%s".' % (line_info, e)
     
     def _line_info(self, line):
         """Line format:
