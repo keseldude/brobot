@@ -25,15 +25,18 @@ from threading import Lock
 class Server(object):
     """An IRC server represenation, which stores the host, port, and nick of the
     user connected. Supports ssl (soon)."""
-    def __init__(self, host, port, nick, name='unnamed', use_ssl=False):
+    def __init__(self, host, port, nick, owner=None, name='unnamed', use_ssl=False):
         self.host = host
         self.port = port
         self.nick = nick
         self.name = name
         self.use_ssl = use_ssl
-        
         self.actual_host = ''
         self.actual_nick = ''
+        if owner is None:
+            self.owner = nick
+        else:
+            self.owner = owner
     
     def reset(self):
         self.actual_host = ''
@@ -225,18 +228,18 @@ class User(object):
         status = self.STATUSES[self.MODES[mode.character]]
         self.status -= status
     
-    @staticmethod
-    def channel_user(nick):
-        return User(nick, '', '', User.NORMAL)
+    @classmethod
+    def channel_user(cls, nick):
+        return cls(nick, '', '', User.NORMAL)
     
-    @staticmethod
-    def parse_user(user):
+    @classmethod
+    def parse_user(cls, user):
         """Helper function that parses user information into a User object."""
         username, host = '', ''
-        if user[0] in User.STATUSES:
+        if user[0] in cls.STATUSES:
             status, nick = user[0], user[1:]
         else:
-            status = User.NORMAL
+            status = cls.NORMAL
             split_user = user.split('@')
             
             if len(split_user) == 1:
@@ -245,5 +248,5 @@ class User(object):
                 info, host = split_user
                 nick, username = info.split('!')
         
-        return User(nick, username, host, status)
+        return cls(nick, username, host, status)
     
