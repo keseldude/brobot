@@ -39,7 +39,7 @@ class PythonEvalPlugin(bot.CommandPlugin):
                     'target': target,
                     'message': (u'Syntax Error',)
                     }
-        except Exception, e:
+        except Exception as e:
             ename = e.__class__.__name__
             msg = '%s: %s' % (ename, e)
             return {'action': self.Action.PRIVMSG,

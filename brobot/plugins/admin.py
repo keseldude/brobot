@@ -39,12 +39,26 @@ class PartPlugin(bot.CommandPlugin):
                 self.ircbot.part(connection, args[0])
     
 
+class ConnectPlugin(bot.CommandPlugin):
+    name = 'connect'
+    admin = True
+    def process(self, connection, source, target, args):
+        if self.ircbot.is_admin(connection.server, source.nick):
+            name = u' '.join(args)
+            server = self.ircbot.get_server_by_name(name)
+            if server is not None:
+                self.ircbot._connect(server)
+
 class QuitPlugin(bot.CommandPlugin):
     name = 'quit'
     admin = True
     def process(self, connection, source, target, args):
         if self.ircbot.is_admin(connection.server, source.nick):
-            self.ircbot.quit(connection, message=u' '.join(args))
+            message = u' '.join(args)
+            if message:
+                self.ircbot.quit(connection, message=message)
+            else:
+                self.ircbot.quit(connection)
     
 
 class ExitPlugin(bot.CommandPlugin):

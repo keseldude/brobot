@@ -46,8 +46,5 @@ class UptimePlugin(bot.CommandPlugin):
     
     def process(self, connection, source, target, args):
         delta = datetime.utcnow() - self.start_time
-        return {'action': self.Action.PRIVMSG,
-                'target': target,
-                'message': (self.format_timedelta(delta),)
-                }
+        return self.privmsg(target, self.format_timedelta(delta))
     

@@ -21,8 +21,5 @@ from core import bot
 class VersionPlugin(bot.CommandPlugin):
     name = 'version'
     def process(self, connection, source, target, args):
-        return {'action': self.Action.PRIVMSG,
-                'target': target,
-                'message': (self.ircbot.get_version(),)
-                }
+        return self.privmsg(target, self.ircbot.get_version())
     

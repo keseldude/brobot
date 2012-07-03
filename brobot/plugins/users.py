@@ -24,9 +24,6 @@ class UsersPlugin(bot.CommandPlugin):
         channel = self.ircbot.find_channel(connection.server, target)
         if channel is not None:
             num_users = len(channel.users)
-            return {'action': self.Action.PRIVMSG,
-                    'target': target,
-                    'message': (u'%d Users in the channel.' % num_users,)
-                    }
+            return self.privmsg(target, u'%d Users in the channel.' % num_users)
     
 

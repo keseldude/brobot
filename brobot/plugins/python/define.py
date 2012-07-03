@@ -19,11 +19,31 @@
 from core import bot
 from evaluator import evaluator
 import inspect
+import shelve
+import logging
+
+log = logging.getLogger(__name__)
 
 DEFINED = []
+SHELF_KEY = 'defined_plugins'
 
 class DefinePlugin(bot.CommandPlugin):
     name = 'define'
+    def load(self):
+        plugins = []
+        shelf = shelve.open(self.shelf_path)
+        try:
+            if shelf.has_key(SHELF_KEY):
+                plugins = shelf[SHELF_KEY]
+        finally:
+            shelf.close()
+        
+        for f_name, expr in plugins:
+            plugin = self.create_plugin(f_name, expr)
+            if plugin:
+                self.ircbot.register_command_plugin(plugin.name, plugin)
+                DEFINED.append((f_name, expr))
+    
     def process(self, connection, source, target, args):
         if len(args) < 2:
             return None
@@ -31,69 +51,77 @@ class DefinePlugin(bot.CommandPlugin):
         f_name = args[0]
         expr = u' '.join(args[1:])
         if 'lambda' not in expr:
-            return None
+            return self.privmsg(target, 'Needs lambda')
+        plugin = self.create_plugin(f_name, expr, target)
+        if isinstance(plugin, dict):
+            return plugin
+        
+        if not self.ircbot.register_command_plugin(plugin.name, plugin):
+            return self.privmsg(target, 'Command already defined. Sorry.')
+        shelf = shelve.open(self.shelf_path)
+        try:
+            if shelf.has_key(SHELF_KEY):
+                plugins = shelf[SHELF_KEY]
+            else:
+                plugins = []
+            
+            plugins.append((f_name, expr))
+            shelf[SHELF_KEY] = plugins
+        finally:
+            shelf.close()
+        
+        DEFINED.append((f_name, expr))
+        return self.privmsg(target, u'Defined %s.' % f_name)
+    
+    def create_plugin(self, f_name, expr, target=None):
         try:
             lmbda = evaluator(expr)
         except SyntaxError:
-            return {'action': self.Action.PRIVMSG,
-                    'target': target,
-                    'message': (u'Syntax Error',)
-                    }
-        
-        if len(inspect.getargspec(lmbda)[0]) != 1:
-            return None
-        
+            if target is None:
+                return False
+            return self.privmsg(target, 'Syntax Error')
+        if target is not None:
+            if len(inspect.getargspec(lmbda)[0]) != 1:
+                return self.privmsg(target, 'Lambda must have one argument')
         class DefinedPlugin(bot.CommandPlugin):
             name = f_name
             def process(self, c, s, t, a):
                 try:
                     result = lmbda(u' '.join(a))
-                except Exception, e:
+                except Exception as e:
                     ename = e.__class__.__name__
                     msg = '%s: %s' % (ename, e)
-                    return {'action': self.Action.PRIVMSG,
-                            'target': target,
-                            'message': (msg,)
-                            }
+                    return self.privmsg(t, msg)
                 else:
-                    return {'action': self.Action.PRIVMSG,
-                            'target': target,
-                            'message': (result,)
-                            }
-        
-        if not self.ircbot.register_command_plugin(f_name, DefinedPlugin):
-            return {'action': self.Action.PRIVMSG,
-                    'target': target,
-                    'message': (u'Command already defined. Sorry.',)
-                    }
-        
-        DEFINED.append(f_name)
-        
-        return {'action': self.Action.PRIVMSG,
-                'target': target,
-                'message': (u'Defined %s.' % f_name,)
-                }
-    
+                    return self.privmsg(t, result)
+        return DefinedPlugin
 
 class UndefinePlugin(bot.CommandPlugin):
     name = 'undefine'
     def process(self, connection, source, target, args):
         f_name = u' '.join(args)
-        if f_name in DEFINED:
+        f_expr = None
+        for name, expr in DEFINED:
+            if name == f_name:
+                f_expr = expr
+                break
+        if f_expr is not None:
             if not self.ircbot.unregister_command_plugin(f_name):
-                return {'action': self.Action.PRIVMSG,
-                        'target': target,
-                        'message': (u'Could not remove plugin %s.' % f_name,)
-                        }
-            DEFINED.remove(f_name)
-            return {'action': self.Action.PRIVMSG,
-                    'target': target,
-                    'message': (u'Undefined %s.' % f_name,)
-                    }
+                return self.privmsg(target, u'Could not remove plugin %s.' % f_name)
+            f_pair = (f_name, f_expr)
+            DEFINED.remove(f_pair)
+            shelf = shelve.open(self.shelf_path)
+            try:
+                if shelf.has_key(SHELF_KEY):
+                    plugins = shelf[SHELF_KEY]
+                    plugins.remove(f_pair)
+                    shelf[SHELF_KEY] = plugins
+            except ValueError:
+                log.error('Unable to remove the plugin... something is wrong.')
+            finally:
+                shelf.close()
+            return self.privmsg(target, u'Undefined %s.' % f_name)
         else:
-            return {'action': self.Action.PRIVMSG,
-                    'target': target,
-                    'message': (u'No such plugin has been defined.',)
-                    }
+            return self.privmsg(target, u'No such plugin has been defined.')
     
 

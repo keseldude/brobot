@@ -26,9 +26,5 @@ class CommandsPlugin(bot.CommandPlugin):
             for plugin in plugins.itervalues():
                 if not plugin.admin:
                     names.append(plugin.name)
-        
-        return {'action': self.Action.PRIVMSG,
-                'target': target,
-                'message': ('Commands: ' + ' '.join(sorted(names)),)
-                }
+        return self.privmsg(target, u'Commands: %s' % u' '.join(sorted(names)))
     

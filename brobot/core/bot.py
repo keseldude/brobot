@@ -66,17 +66,30 @@ class CommandPlugin(Plugin):
         except KeyError:
             log.error(u'Invalid plugin response.')
         else:
+            if isinstance(message, basestring):
+                message = (message,)
             for line in message:
                 try:
                     action(connection, target, line)
                 except IRCError as e:
                     log.error(e)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.error('Unexpected exception occurred: %s' % e)
     
     def process(self, connection, source, target, args):
         raise NotImplementedError
-    
+
+    def privmsg(self, target, message):
+        return {'action': self.Action.PRIVMSG,
+                'target': target,
+                'message': message
+                }
+
+    def notice(self, target, message):
+        return {'action': self.Action.NOTICE,
+                'target': target,
+                'message': message
+                }
 
 class EventPlugin(Plugin):
     """Abstract Plugin to be used for events."""

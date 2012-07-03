@@ -21,8 +21,5 @@ from core import bot
 class BotPlugin(bot.CommandPlugin):
     name = 'bot'
     def process(self, connection, source, target, args):
-        return {'action': self.Action.PRIVMSG,
-                'target': target,
-                'message': (':)',)
-                }
+        return self.privmsg(target, ':)')
     

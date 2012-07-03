@@ -66,9 +66,5 @@ class ComposePlugin(bot.CommandPlugin):
                 message = u'\n'.join(result['message'])
             except KeyError:
                 return None
-        
-        return {'action': self.Action.PRIVMSG,
-                'target': target,
-                'message': message.split(u'\n')
-                }
+        return self.privmsg(target, message.split(u'\n'))
     
