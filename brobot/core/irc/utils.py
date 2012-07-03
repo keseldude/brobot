@@ -17,6 +17,7 @@
 #===============================================================================
 
 from events import Events
+from structures import User
 
 def parse_irc_line(server, line):
     """Line format:
