@@ -20,8 +20,7 @@ from core import bot
 import re
 import urllib
 import logging
-from BeautifulSoup import BeautifulSoup
-import gc
+import lxml.html
 
 log = logging.getLogger(__name__)
 
@@ -33,34 +32,15 @@ urllib._urlopener = FirefoxURLopener()
 
 class URITitlePlugin(bot.EventPlugin):
     name = 'uri-title'
-    URI_RE = re.compile(r'https?://[A-Za-z0-9:\-\.\'_/&%#!=?,+]+')
+    URI_RE = re.compile(r'https?://[A-Za-z0-9:\-\.\'_/&%#!=?,+*;~\$\[\]]+')
     def get_title(self, uri):
         try:
-            connected_uri = urllib.urlopen(uri)
+            t = lxml.html.parse(uri)
         except IOError as e:
             log.error(unicode(e))
             return None
-        
-        try:
-            info = connected_uri.info()
-            if 'Content-Type' in info:
-                content_type = info['Content-Type']
-                if content_type.startswith('text/html'):
-                    soup = BeautifulSoup(connected_uri)
-                    
-                    if soup.title is not None and \
-                        soup.title.string is not None:
-                        title = \
-                            BeautifulSoup(u' '.join(soup.title.string.split()),
-                                          convertEntities=\
-                                                BeautifulSoup.XHTML_ENTITIES)
-                        return unicode(title)
-        finally:
-            connected_uri.close()
-            del connected_uri
-            gc.collect(2)
-        
-        return None
+        title = t.find('.//title')
+        return getattr(title, 'text', None)
     
     def process(self, connection, source='', target='', message=''):
         for uri in self.URI_RE.findall(message):
