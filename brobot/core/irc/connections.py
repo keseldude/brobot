@@ -62,7 +62,7 @@ class ConnectionManager(object):
         try:
             in_sockets, _, _ = \
                 select.select(keys, [], [], timeout)
-        except socket.error, error:
+        except socket.error as error:
             log.debug(unicode(error))
             for sock, connection in self.connections.items():
                 if not connection.connected:
@@ -121,12 +121,12 @@ class Connection(object):
         """Connects to the server specified by the Connection object."""
         try:
             self._socket.connect((self.server.host, self.server.port))
-        except socket.error, error:
+        except socket.error:
             log.error(u'Unable to connect. Probably not connected to the \
 internet.')
             try:
                 self._socket.close()
-            except socket.error, error:
+            except socket.error as error:
                 log.critical(unicode(error))
             return False
         
@@ -148,7 +148,7 @@ internet.')
         else:
             try:
                 self._socket.close()
-            except socket.error, error:
+            except socket.error as error:
                 log.critical(unicode(error))
                 raise IRCError(error)
         
@@ -167,7 +167,7 @@ internet.')
         """Processes new data received from the IRC server."""
         try:
             data = self._socket.recv(4096)
-        except socket.error, error:
+        except socket.error as error:
             log.error(unicode(error))
             self.disconnect('Connection reset by peer')
         else:
@@ -202,7 +202,7 @@ internet.')
         
         try:
             self._socket.send(message + '\r\n')
-        except socket.error, error:
+        except socket.error as error:
             log.error(unicode(error))
             raise IRCError(u'Unable to send message.')
     
