@@ -17,6 +17,7 @@
 #===============================================================================
 
 import yaml
+import os
 import os.path
 import sys
 import logging
@@ -38,6 +39,9 @@ class Brobot(object):
     def reload_modules(self):
         root_logger = logging.getLogger('')
         root_logger.handlers = []
+
+        for key, value in sys.modules.items():
+            print key, sys.getrefcount(value)
         
         for key, module in sys.modules.items():
             mod_path = getattr(module, '__file__', None)
@@ -47,10 +51,8 @@ class Brobot(object):
     
     def start(self):
         restart = self.ircbot.start()
-        while restart:
-            self.reload_modules()
-            self.load_ircbot()
-            restart = self.ircbot.start()
+        if restart:
+            sys.exit(3)
     
     def exit(self):
         self.ircbot.exit()
@@ -74,5 +76,26 @@ def main():
     except KeyboardInterrupt:
         brobot.exit()
 
+def restart_with_reboot():
+    while True:
+        args = [sys.executable] + sys.argv
+        if sys.platform == 'win32':
+            args = ['"%s"' % arg for arg in args]
+        new_env = os.environ.copy()
+        new_env['RUN_MAIN'] = 'TRUE'
+        exit_code = os.spawnve(os.P_WAIT, sys.executable, args, new_env)
+        if exit_code != 3:
+            return exit_code
+
 if __name__ == '__main__':
-    main()
+    if os.environ.get('RUN_MAIN') == 'TRUE':
+        main()
+    else:
+        try:
+            exit_code = restart_with_reboot()
+            if exit_code < 0:
+                os.kill(os.getpid(), -exit_code)
+            else:
+                sys.exit(exit_code)
+        except KeyboardInterrupt:
+            pass

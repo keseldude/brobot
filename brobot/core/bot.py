@@ -283,7 +283,6 @@ class IRCBot(Client):
         process = Thread(target=self.process_message,
                             args=(connection, source, target, message,
                                   is_pubmsg))
-        process.daemon = True
         process.start()
     
     def on_privmsg(self, connection, source, target, message):

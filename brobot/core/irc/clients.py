@@ -124,7 +124,6 @@ class Client(object):
         ConnectionManager."""
         server.reset()
         t = Thread(target=self._try_connect, args=(server,))
-        t.daemon = True
         t.start()
     
     def _ping_disconnect(self, connection):
@@ -134,7 +133,7 @@ class Client(object):
         self._connect(connection.server)
     
     def _connection_test(self):
-        while True:
+        while self.connection_manager.running:
             connections = self.connection_manager.connections
             for sock, connection in connections.items():
                 if not connection.welcomed or sock in self.ping_timers:
@@ -151,7 +150,6 @@ class Client(object):
     
     def _start_connection_test(self):
         t = Thread(target=self._connection_test)
-        t.daemon = True
         t.start()
     
     def on_initial_connect(self):
