@@ -181,12 +181,11 @@ internet.')
                 for line in lines:
                     if not line:
                         continue
-                    
-                    log.debug(unicode(line, 'utf-8'))
-                    
                     line_info = parse_irc_line(self.server, line)
                     command = line_info['command']
                     del line_info['command']
+                    if command != Events.PONG:
+                        log.debug(unicode(line, 'utf-8'))
                     try:
                         event_manager.hook(command, self, line_info)
                     except IRCError as e:
