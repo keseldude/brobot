@@ -57,4 +57,4 @@ data_path: data
 log_filename: brobot.log
 pid_filename: brobot.pid
 command_prefix: '!'
-version_string: brobot v0.94
+version_string: brobot v0.95
