@@ -31,3 +31,5 @@ brobot is an simple, extensible IRC bot written in Python, created by Michael Ke
 * Write good responses for most of the codes in the IRC protocol
 * Write documentation for writing plugins (Command and Event)
 * Clean up bot.py to make executation sequence clearer
+* Buffer output to prevent Excess Floor
+* Clean up locks to force atomicity in the low level IRC connection
