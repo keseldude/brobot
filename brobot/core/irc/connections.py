@@ -20,6 +20,7 @@ from events import Events
 from structures import User
 from time import sleep
 from utils import parse_irc_line
+from threading import Lock
 import socket, select
 import logging
 
@@ -39,6 +40,7 @@ class ConnectionManager(object):
     """Manages all connections made."""
     def __init__(self, event_manager):
         self.connections = {} # socket -> connection
+        self.connection_locks = {}
         self.event_manager = event_manager
         self.queue = []
         self._running = False
@@ -52,6 +54,7 @@ class ConnectionManager(object):
         CONNECT event."""
         self._running = True
         self.connections[connection.socket] = connection
+        self.connection_locks[connection.socket] = Lock()
         self.event_manager.hook(Events.CONNECT, connection)
     
     def process(self, timeout=0.2):
@@ -67,6 +70,7 @@ class ConnectionManager(object):
             for sock, connection in self.connections.items():
                 if not connection.connected:
                     del self.connections[sock]
+                    del self.connection_locks[sock]
         except select.error:
             pass
         else:
@@ -74,22 +78,26 @@ class ConnectionManager(object):
                 connection = self.connections[sock]
                 if connection.socket is None:
                     del self.connections[sock]
+                    del self.connection_locks[sock]
                 else:
-                    connection.process(self.event_manager)
+                    with self.connection_locks[sock]:
+                        connection.process(self.event_manager)
     
     def disconnect(self, connection, message=u''):
         """Closes a connection with an optional message."""
-        if  connection.socket is not None \
-            and connection.socket in self.connections:
+        if connection.socket is not None and\
+                connection.socket in self.connections:
+            lock = self.connection_locks[connection.socket]
+            del self.connection_locks[connection.socket]
             del self.connections[connection.socket]
-            connection.disconnect(message)
+            with lock:
+                connection.disconnect(message)
     
     def exit(self, message=u''):
         """Closes all connections with an optional message."""
         if self._running:
             for connection in self.connections.values():
                 self.disconnect(connection, message)
-            
             self._running = False
     
 

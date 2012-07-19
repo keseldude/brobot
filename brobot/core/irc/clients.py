@@ -83,7 +83,6 @@ class Client(object):
             Events.ERR_NICKNAMEINUSE: EventHook(self.on_nickname_in_use),
             Events.ERROR: EventHook(self._on_error, message=True)
         }, event_plugins))
-        self.process_lock = Lock()
         self.ping_timers = {}
     
     def start(self):
@@ -101,8 +100,7 @@ class Client(object):
         self._start_connection_test()
         
         while self.connection_manager.running:
-            with self.process_lock:
-                self.connection_manager.process()
+            self.connection_manager.process()
     
     def __connect(self, server):
         connection = Connection(server)
@@ -159,8 +157,7 @@ class Client(object):
     def exit(self, message=u'Bye!'):
         """Disconnects from every connection in the ConnectionManager with the
         given QUIT message."""
-        with self.process_lock:
-            self.connection_manager.exit(message)
+        self.connection_manager.exit(message)
     
     def get_server_by_name(self, name):
         for server in self._servers:
@@ -253,8 +250,7 @@ class Client(object):
         """Disconnects the given connection with the given message. This is
         better than just quitting because it also cleans things up with the
         connection manager."""
-        with self.process_lock:
-            self.connection_manager.disconnect(connection, message)
+        self.connection_manager.disconnect(connection, message)
     
     def on_connect(self, connection):
         raise NotImplementedError
