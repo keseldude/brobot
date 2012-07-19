@@ -36,19 +36,6 @@ class Brobot(object):
         settings = self.load_settings()
         self.ircbot = bot.IRCBot(settings)
     
-    def reload_modules(self):
-        root_logger = logging.getLogger('')
-        root_logger.handlers = []
-
-        for key, value in sys.modules.items():
-            print key, sys.getrefcount(value)
-        
-        for key, module in sys.modules.items():
-            mod_path = getattr(module, '__file__', None)
-            if mod_path is not None and mod_path != __file__ and \
-                mod_path.startswith(self.brobot_dir):
-                del sys.modules[key]
-    
     def start(self):
         restart = self.ircbot.start()
         if restart:
@@ -75,6 +62,7 @@ def main():
         brobot.start()
     except KeyboardInterrupt:
         brobot.exit()
+    sys.exit(0)
 
 def restart_with_reboot():
     while True:
