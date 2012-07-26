@@ -1,7 +1,7 @@
 # BROBOT [(Plugins)](http://github.com/keseldude/brobot-plugins)
 
 ## About
-brobot is an simple, extensible IRC bot written in Python, created by Michael Keselman.
+brobot is a simple, extensible IRC bot written in Python, created by Michael Keselman.
 
 * IRC library written from scratch, following current python standards
 * Easy to use plugin interface that lets you
@@ -21,7 +21,7 @@ brobot is an simple, extensible IRC bot written in Python, created by Michael Ke
         $ cp settings.example.yml settings.yml
     
 3. Modify the settings to connect to the right servers, channels, etc.
-4. Optionally write some plugins and put them in the plugins directory
+4. Optionally write some plugins, and put them in the plugins directory
 5. Run the script
 
         $ python brobot.py
@@ -32,4 +32,3 @@ brobot is an simple, extensible IRC bot written in Python, created by Michael Ke
 * Write documentation for writing plugins (Command and Event)
 * Clean up bot.py to make executation sequence clearer
 * Buffer output to prevent Excess Flood
-* Clean up locks to force atomicity in the low level IRC connection
