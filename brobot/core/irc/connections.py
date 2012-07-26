@@ -183,7 +183,9 @@ internet.')
                 log.error(u'No data received from server.')
                 self.disconnect('Connection reset by peer')
             else:
-                lines = (self.prev_line + data).split('\r\n')
+                # I'm a little worried that the \r\n convention isn't strictly followed
+                # lines = (self.prev_line + data).split('\r\n')
+                lines = [s.strip() for s in (self.prev_line + data).split('\n')]
                 self.prev_line = lines.pop()
                 
                 for line in lines:
