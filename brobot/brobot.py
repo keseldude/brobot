@@ -16,14 +16,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #===============================================================================
 
-import yaml
-import os
-import os.path
 import sys
-import logging
+import os
 
 class Brobot(object):
     def __init__(self, brobot_path):
+        import os.path
         self.brobot_path = brobot_path
         self.brobot_dir = os.path.dirname(self.brobot_path)
         self.settings_path = os.path.join(self.brobot_dir, 'settings.yml')
@@ -45,6 +43,7 @@ class Brobot(object):
         self.ircbot.exit()
     
     def load_settings(self):
+        import yaml
         f = open(self.settings_path)
         settings = yaml.load(f)
         
@@ -56,6 +55,7 @@ class Brobot(object):
     
 
 def main():
+    import os.path
     brobot_path = os.path.abspath(__file__)
     brobot = Brobot(brobot_path)
     try:

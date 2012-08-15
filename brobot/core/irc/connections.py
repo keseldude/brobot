@@ -75,7 +75,10 @@ class ConnectionManager(object):
             pass
         else:
             for sock in in_sockets:
-                connection = self.connections[sock]
+                try:
+                    connection = self.connections[sock]
+                except KeyError:
+                    continue
                 if connection.socket is None:
                     del self.connections[sock]
                     del self.connection_locks[sock]
