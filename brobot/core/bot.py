@@ -260,7 +260,7 @@ class IRCBot(Client):
     def process_message(self, connection, source, target, message, is_pubmsg):
         """Processes a message, determining whether it is a bot command, and
         taking action if it is."""
-        if message[0] == self.command_prefix:
+        if message and message[0] == self.command_prefix:
             if message[1:2] == u' ':
                 command = u' '
                 args = message[2:].strip().split(u' ')
